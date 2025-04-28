@@ -3,6 +3,31 @@ import streamlit as st
 import pandas as pd
 import random as rand
 
+import streamlit as st
+
+# --- Protección por contraseña simple ---
+def check_password():
+    def password_entered():
+        if st.session_state["password"] == "PrecastProjects":  # << Cambia aquí la clave que quieras
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # 🔒 Borra la contraseña ingresada del estado
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.text_input("🔒 Enter Password", type="password", on_change=password_entered, key="password")
+        return False
+    elif not st.session_state["password_correct"]:
+        st.text_input("🔒 Enter Password", type="password", on_change=password_entered, key="password")
+        st.error("😕 Incorrect password, try again.")
+        return False
+    else:
+        return True
+
+# 🚪 Detener la app si no se ingresa correctamente la contraseña
+if not check_password():
+    st.stop()
+
 st.markdown("""
     <style>
     /* Fuente base y fondo */
