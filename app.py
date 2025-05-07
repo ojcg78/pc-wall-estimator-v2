@@ -237,7 +237,7 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
 
 
 
-concrete_options = ["Concrete 50 MPa", "Concrete 60 MPa", "Concrete 50 MPa (Special Mix)"]
+concrete_options = ["Concrete 50 MPa", "Concrete 65 MPa", "Concrete 50 MPa (Special Mix)"]
 
 # 📁 Archivo CSV donde se guardarán los costos
 COSTS_FILE = "costos_guardado.csv"
@@ -245,7 +245,7 @@ COSTS_FILE = "costos_guardado.csv"
 # 📌 Cargar costos si el archivo ya existe, si no, usa costos predeterminados
 default_costs_data = {
     "Element": [
-        "Concrete 50 MPa", "Concrete 60 MPa", "Concrete 50 MPa (Special Mix)",
+        "Concrete 50 MPa", "Concrete 65 MPa", "Concrete 50 MPa (Special Mix)",
         "RL1018", "RL1118", "RL1218", "RL718", "RL818", "RL918",
         "SL102", "SL62", "SL72", "SL81", "SL82", "SL92",
         "Steel Bars", "Concrete Testing", "Ripbox", "Lifting", "Wages",
@@ -260,7 +260,7 @@ default_costs_data = {
         "m²", "m²", "m²", "ea", "ea", "ea", "ea"
     ],
     "Cost": [
-        300, 330, 1000,
+        265, 295, 1000,
         3.20, 3.20, 3.20, 3.20, 3.20, 3.20,
         2.75, 3.04, 2.69, 2.72, 2.59, 3.16,
         3.2, 40, 90, 25, 45,
