@@ -577,7 +577,7 @@ with st.expander("🪢 Reinforcement"):
         st.write(f"➕ Additional Steel: {extra_steel_kg:.2f} kg")
 
     # 🔸 Total general
-    total_steel_weight = total_section_weight + reo_rate_kg_total + extra_steel_kg
+    total_steel_weight = total_section_weight + extra_steel_kg
     st.success(f"🔸 Total Steel Reinforcement: {total_steel_weight:.2f} kg")
 
     # 🔚 Mostrar total de secciones solamente
@@ -781,9 +781,7 @@ total_steel_weight = (
     trimer_bar_total * (1 + waste_trimmer / 100) +
     additional_reinforcement_kg_total
 )
-# Solo sumás Reo Rate si el usuario NO lo está desglosando
-if st.session_state.get("use_reo_option") == "Add to bars and mesh":
-    total_steel_weight += reo_rate_kg_total * (1 + waste_steel / 100)
+
   
 # Cálculo de pesos individuales para costos separados
 bars_weight_kg = bars_weight_m2 * wall_area
