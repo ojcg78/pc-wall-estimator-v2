@@ -775,7 +775,6 @@ with st.expander("♻️ Waste Factors (Optional)"):
 
     # 🔹 Cálculo explícito del peso total combinado (con waste)
 total_steel_weight = (
-    reo_rate_kg_total * (1 + waste_steel / 100) +
     bars_weight_total * (1 + waste_steel / 100) +
     mesh_weight_total * (1 + waste_mesh / 100) +
     trimer_bar_total * (1 + waste_trimmer / 100) +
