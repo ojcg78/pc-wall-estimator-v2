@@ -780,7 +780,8 @@ total_steel_weight = (
     trimer_bar_total * (1 + waste_trimmer / 100) +
     additional_reinforcement_kg_total
 )
-
+if reo_rate > 0:
+    total_steel_weight += reo_rate_kg_total * (1 + waste_steel / 100)
   
 # Cálculo de pesos individuales para costos separados
 bars_weight_kg = bars_weight_m2 * wall_area
