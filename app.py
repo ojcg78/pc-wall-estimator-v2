@@ -774,13 +774,20 @@ with st.expander("♻️ Waste Factors (Optional)"):
     waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
     # 🔹 Cálculo explícito del peso total combinado (con waste)
-total_steel_weight = (
-    reo_rate_kg_total * (1 + waste_steel / 100) +
-    bars_weight_total * (1 + waste_steel / 100) +
-    mesh_weight_total * (1 + waste_mesh / 100) +
-    trimer_bar_total * (1 + waste_trimmer / 100) +
-    additional_reinforcement_kg_total
-)
+    if st.session_state.get("use_reo_option") == "Use only Reo Rate":
+        total_steel_weight = (
+            reo_rate_kg_total * (1 + waste_steel / 100) +
+            trimer_bar_total * (1 + waste_trimmer / 100) +
+            additional_reinforcement_kg_total
+        )
+    else:
+        total_steel_weight = (
+            reo_rate_kg_total * (1 + waste_steel / 100) +
+            bars_weight_total * (1 + waste_steel / 100) +
+            mesh_weight_total * (1 + waste_mesh / 100) +
+            trimer_bar_total * (1 + waste_trimmer / 100) +
+            additional_reinforcement_kg_total
+        )
 
   
 # Cálculo de pesos individuales para costos separados
@@ -814,6 +821,14 @@ mesh_cost_per_m2 = 0
 if mesh_reinforcement == "Yes" and mesh_type in cost_dict:
     if total_mesh_weight is not None:
         mesh_cost_per_m2 = (total_mesh_weight * cost_dict[mesh_type]) / wall_area
+
+# 🔧 Reset de componentes si se usa SOLO Reo Rate (permite trimer bar y refuerzo adicional)
+if st.session_state.get("use_reo_option") == "Use only Reo Rate":
+    bars_weight_m2 = 0
+    mesh_weight_m2 = 0
+    bars_weight_total = 0
+    mesh_weight_total = 0
+    mesh_cost_per_m2 = 0
 
 
 cost_per_m2 = {
