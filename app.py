@@ -829,7 +829,7 @@ cost_per_m2 = {
     "Steel Bars (H+V)": (bars_weight_m2 * (1 + waste_steel / 100) * cost_dict.get("Steel Bars", 0)),
     "Trimer Bar": (trimer_bar_m2 * (1 + waste_trimmer / 100) * cost_dict.get("Steel Bars", 0)),
     "Mesh": mesh_cost_per_m2 * (1 + waste_mesh / 100),
-    "Reo Rate": (reo_rate_kg * cost_dict.get("Steel Bars", 0)),
+    "Reo Rate": (reo_rate * (wall_thickness / 1000)) * cost_dict.get("Steel Bars", 0),
     "Additional Reinforcement": (extra_steel_kg * cost_dict.get("Steel Bars", 0)) / wall_area if wall_area > 0 else 0,
 
     # 🔹 Otros elementos
