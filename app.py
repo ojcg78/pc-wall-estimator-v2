@@ -548,7 +548,7 @@ with st.expander("🪢 Reinforcement"):
     detailed_sections_data = []
     for i in range(st.session_state.num_detail_sections):
         with st.container(border=True):
-            st.markdown(f"### 🧱 Bars and Mesh Section {i + 1}")
+            st.markdown(f"### 💠 Bars and Mesh Section {i + 1}")
             section_data = detailed_reinforcement_section(i, steel_weight_lookup, mesh_weight_lookup)
             detailed_sections_data.append(section_data)
 
