@@ -8,7 +8,7 @@ import streamlit as st
 # --- Protección por contraseña simple ---
 def check_password():
     def password_entered():
-        if st.session_state["password"] == "PrecastProjects":  # << Cambia aquí la clave que quieras
+        if st.session_state["password"] == "Precast123":  # << Cambia aquí la clave que quieras
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # 🔒 Borra la contraseña ingresada del estado
         else:
