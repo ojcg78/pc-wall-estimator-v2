@@ -515,14 +515,7 @@ st.markdown(
 # 📌 Panel Dimensions
 with st.expander("📐 Panel Dimensions"):
     number_of_panels = st.number_input("Number of Panels", min_value=0, value=0)
-    wall_area = st.number_input(
-    "Total Wall Area (m²)",
-    min_value=0.0,
-    value=0.0,
-    step=0.01,
-    format="%.4f",
-    key="wall_area_input"
-)    
+    wall_area = st.number_input("Total Wall Area (m²)", min_value=0.0, value=0.0)
     wall_thickness = st.number_input("Wall Thickness (mm)", min_value=0, step=10, value=0)
     concrete_type = st.selectbox("Concrete Type", concrete_options)
 
