@@ -692,7 +692,10 @@ with st.expander("🔩 Additional Elements"):
 
         if item_label.strip():
             if item_unit == "$/panel" and number_of_panels > 0:
-                additional_custom_elements[item_label.strip()] = (item_value * number_of_panels) / wall_area
+                additional_custom_elements[item_label.strip()] = (
+                    (item_value * number_of_panels) / wall_area if wall_area > 0 else 0
+        )
+
             elif item_unit == "$/m²":
                 additional_custom_elements[item_label.strip()] = item_value
             elif item_unit == "$/unit":
@@ -701,7 +704,10 @@ with st.expander("🔩 Additional Elements"):
 
             if item_label.strip():
                 if item_unit == "$/panel" and number_of_panels > 0:
-                    additional_custom_elements[item_label.strip()] = (item_value * number_of_panels) / wall_area
+                    additional_custom_elements[item_label.strip()] = (
+                        (item_value * number_of_panels) / wall_area if wall_area > 0 else 0
+       )
+
                 elif item_unit == "$/m²":
                     additional_custom_elements[item_label.strip()] = item_value
                 elif item_unit == "$/unit":
