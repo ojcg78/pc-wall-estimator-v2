@@ -1,7 +1,15 @@
-streamlit
-pandas
-numpy
-xlsxwriter
-openpyxl
-Pillow
+# Núcleo de la app
+streamlit==1.35.0
+pandas==2.2.2
+numpy==1.26.4
 
+# Excel y reportes
+xlsxwriter==3.2.0
+openpyxl==3.1.5   # para leer/escribir .xlsx más allá de xlsxwriter
+reportlab==4.2.2  # si en algún momento generas PDFs
+
+# Imágenes
+Pillow==10.3.0
+
+# Otras utilidades
+altair==5.3.0     # gráficas más elaboradas (si en algún momento añades)
