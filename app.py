@@ -5,6 +5,14 @@ import random as rand
 
 import streamlit as st
 
+# --- Utilidad: divide solo si el denominador es > 0 ---
+def safe_div(n, d):
+    try:
+        return n / d if (d is not None and d > 0) else 0.0
+    except Exception:
+        return 0.0
+
+
 # --- Protección por contraseña simple ---
 def check_password():
     def password_entered():
@@ -712,9 +720,7 @@ with st.expander("🔩 Additional Elements"):
 
         if item_label.strip():
             if item_unit == "$/panel" and number_of_panels > 0:
-                additional_custom_elements[item_label.strip()] = (
-                    (item_value * number_of_panels) / wall_area if wall_area > 0 else 0
-        )
+                additional_custom_elements[item_label.strip()] = safe_div((item_value * number_of_panels), wall_area)
 
             elif item_unit == "$/m²":
                 additional_custom_elements[item_label.strip()] = item_value
@@ -724,9 +730,7 @@ with st.expander("🔩 Additional Elements"):
 
             if item_label.strip():
                 if item_unit == "$/panel" and number_of_panels > 0:
-                    additional_custom_elements[item_label.strip()] = (
-                        (item_value * number_of_panels) / wall_area if wall_area > 0 else 0
-       )
+                    additional_custom_elements[item_label.strip()] = safe_div((item_value * number_of_panels), wall_area)
 
                 elif item_unit == "$/m²":
                     additional_custom_elements[item_label.strip()] = item_value
@@ -749,9 +753,8 @@ with st.expander("➕ EO Items (Optional)", expanded=False):
 
             if eo_label.strip():
                 if eo_unit == "$/panel" and number_of_panels > 0:
-                    eo_costs[eo_label.strip()] = (
-                        (eo_value * number_of_panels) / wall_area if wall_area > 0 else 0
-                    )
+                    eo_costs[eo_label.strip()] = safe_div((eo_value * number_of_panels), wall_area)
+
                 elif eo_unit == "$/m²":
                     eo_costs[eo_label.strip()] = eo_value
 
@@ -759,9 +762,8 @@ with st.expander("➕ EO Items (Optional)", expanded=False):
         
         if eo_label.strip():
             if eo_unit == "$/panel" and number_of_panels > 0:
-                eo_costs[eo_label.strip()] = (
-                    (eo_value * number_of_panels) / wall_area if wall_area > 0 else 0
-                )
+                eo_costs[eo_label.strip()] = safe_div((eo_value * number_of_panels), wall_area)
+
             elif eo_unit == "$/m²":
                 eo_costs[eo_label.strip()] = eo_value
 
@@ -871,10 +873,9 @@ else:
 
 # ✅ Inicializar por defecto para evitar errores
 mesh_cost_per_m2 = 0
-if mesh_reinforcement == "Yes" and mesh_type in cost_dict and wall_area > 0:
+if mesh_reinforcement == "Yes" and mesh_type in cost_dict:
     if total_mesh_weight is not None:
-        mesh_cost_per_m2 = (total_mesh_weight * cost_dict[mesh_type]) / wall_area
-
+        mesh_cost_per_m2 = safe_div((total_mesh_weight * cost_dict[mesh_type]), wall_area)
 
 cost_per_m2 = {
     "Concrete": (
