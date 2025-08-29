@@ -729,16 +729,22 @@ with st.expander("➕ EO Items (Optional)", expanded=False):
 
             if eo_label.strip():
                 if eo_unit == "$/panel" and number_of_panels > 0:
-                    eo_costs[eo_label.strip()] = (eo_value * number_of_panels) / wall_area
+                    eo_costs[eo_label.strip()] = (
+                        (eo_value * number_of_panels) / wall_area if wall_area > 0 else 0
+                    )
                 elif eo_unit == "$/m²":
                     eo_costs[eo_label.strip()] = eo_value
+
 
         
         if eo_label.strip():
             if eo_unit == "$/panel" and number_of_panels > 0:
-                eo_costs[eo_label.strip()] = (eo_value * number_of_panels) / wall_area
+                eo_costs[eo_label.strip()] = (
+                    (eo_value * number_of_panels) / wall_area if wall_area > 0 else 0
+                )
             elif eo_unit == "$/m²":
                 eo_costs[eo_label.strip()] = eo_value
+
 
 
 
@@ -845,7 +851,7 @@ else:
 
 # ✅ Inicializar por defecto para evitar errores
 mesh_cost_per_m2 = 0
-if mesh_reinforcement == "Yes" and mesh_type in cost_dict:
+if mesh_reinforcement == "Yes" and mesh_type in cost_dict and wall_area > 0:
     if total_mesh_weight is not None:
         mesh_cost_per_m2 = (total_mesh_weight * cost_dict[mesh_type]) / wall_area
 
