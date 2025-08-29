@@ -307,6 +307,7 @@ def float_input(label: str, key: str, default: float = 0.0, decimals: int = 4, m
 
 
 # Cargar el logo e incrustarlo como base64
+@st.cache_data(show_spinner=False)
 def image_to_base64(filename_base):
     import os
     for ext in [".png", ".jpg", ".jpeg", ".webp"]:
@@ -727,17 +728,6 @@ with st.expander("🔩 Additional Elements"):
                 additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
 
 
-            if item_label.strip():
-                if item_unit == "$/panel" and number_of_panels > 0:
-                    additional_custom_elements[item_label.strip()] = safe_div((item_value * number_of_panels), wall_area)
-
-                elif item_unit == "$/m²":
-                    additional_custom_elements[item_label.strip()] = item_value
-                elif item_unit == "$/unit":
-                    additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
-
-
-
 with st.expander("➕ EO Items (Optional)", expanded=False):
     num_eo = st.number_input("How many EO Items (Optional) do you want to add?", min_value=0, max_value=10, step=1, value=0)
     
@@ -756,16 +746,6 @@ with st.expander("➕ EO Items (Optional)", expanded=False):
 
                 elif eo_unit == "$/m²":
                     eo_costs[eo_label.strip()] = eo_value
-
-
-        
-        if eo_label.strip():
-            if eo_unit == "$/panel" and number_of_panels > 0:
-                eo_costs[eo_label.strip()] = safe_div((eo_value * number_of_panels), wall_area)
-
-            elif eo_unit == "$/m²":
-                eo_costs[eo_label.strip()] = eo_value
-
 
 
 
