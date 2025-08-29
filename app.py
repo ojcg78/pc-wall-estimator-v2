@@ -522,16 +522,21 @@ if st.checkbox("Show Editable Cost Table"):
         st.markdown("### ⚠️ Reset Costs to Default")
         confirm_reset = st.checkbox("I confirm I want to reset all costs to default values")
 
-        if st.button("🔄 Reset Costs", disabled=not confirm_reset):
+        if st.button("🔄 Reset Costs", disabled=not confirm_reset, key="reset_costs_btn"):
             costs_df = pd.DataFrame(default_costs_data)
             costs_df.to_csv(COSTS_FILE, index=False)
-            st.success("✅ Costs reset to default successfully! Please reload the page.")
+            st.cache_data.clear()                       # invalida la caché de load_costs
+            st.session_state["did_reset_costs"] = True  # marca que hubo reset en este render
+            st.success("✅ Costs reset to default. Reloading…")
+            st.rerun()                                   # recarga inmediata para leer defaults
+
 
         # 🔹 Guardar edición automáticamente
-        if edited_df is not None:
+        if edited_df is not None and not st.session_state.get("did_reset_costs"):
             edited_df.to_csv(COSTS_FILE, index=False)
             st.cache_data.clear()   # 🔄 limpiar caché para que load_costs recargue
             cost_dict = dict(zip(edited_df["Element"], edited_df["Cost"]))
+
 
 else:
     cost_dict = dict(zip(costs_df["Element"], costs_df["Cost"]))
