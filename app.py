@@ -537,6 +537,10 @@ if st.checkbox("Show Editable Cost Table"):
             st.cache_data.clear()   # 🔄 limpiar caché para que load_costs recargue
             cost_dict = dict(zip(edited_df["Element"], edited_df["Cost"]))
 
+        # ✅ Asegurar cost_dict aunque no se edite nada
+        cost_df_current = edited_df if edited_df is not None else costs_df
+        cost_dict = dict(zip(cost_df_current["Element"], cost_df_current["Cost"]))
+
 
 else:
     cost_dict = dict(zip(costs_df["Element"], costs_df["Cost"]))
