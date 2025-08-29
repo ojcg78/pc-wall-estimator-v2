@@ -278,6 +278,26 @@ from PIL import Image
 import base64
 from io import BytesIO
 
+# --- Helper robusto para números float sin "rebotes" del widget ---
+def float_input(label: str, key: str, default: float = 0.0, decimals: int = 4, min_value: float = 0.0):
+    # guarda y muestra el valor como texto, tolera comas y espacios
+    if key not in st.session_state:
+        st.session_state[key] = f"{default:.{decimals}f}"
+    txt = st.text_input(label, value=st.session_state[key])
+    val_str = (txt or "").strip().replace(",", ".")
+    try:
+        val = float(val_str)
+    except ValueError:
+        val = default
+    # aplica mínimo si corresponde
+    if val < min_value:
+        val = min_value
+    # mantiene formato estable en pantalla
+    st.session_state[key] = f"{val:.{decimals}f}"
+    return val
+
+
+
 # Cargar el logo e incrustarlo como base64
 def image_to_base64(filename_base):
     import os
@@ -522,14 +542,14 @@ with st.expander("📐 Panel Dimensions"):
         key="num_panels_input",
     )
 
-    wall_area = st.number_input(
+    wall_area = float_input(
         "Total Wall Area (m²)",
+        key="wall_area_input_text",
+        default=0.0,
+        decimals=4,
         min_value=0.0,
-        value=0.0,
-        step=0.01,
-        format="%.4f",
-        key="wall_area_input",
     )
+
 
     wall_thickness = st.number_input(
         "Wall Thickness (mm)",
@@ -550,7 +570,7 @@ with st.expander("📐 Panel Dimensions"):
 with st.expander("🪟 Openings"):
     has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
     if has_openings == "Yes":
-        opening_area = st.number_input("Total Openings Area (m²)", min_value=0.0, value=0.0)
+        opening_area = float_input("Total Openings Area (m²)", key="opening_area_input_text", default=0.0, decimals=4, min_value=0.0)
         number_of_openings = st.number_input("Number of Openings", min_value=0, value=0)
     else:
         opening_area = 0
