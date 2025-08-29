@@ -660,13 +660,12 @@ with st.expander("🔹 Dowels"):
             use_manual_length = st.checkbox("Enter Dowel Length Manually?")
             
             if use_manual_length:
-                dowel_length = st.number_input("Dowel Length (m)", min_value=0.0, value=0.0)
-            if dowel_bar_type:
+                dowel_length = st.number_input("Dowel Length (m)", min_value=0.0, value=0.0, key="dowel_len_manual")
+            elif dowel_bar_type:
                 dowel_length = (40 * bar_diameter_lookup[dowel_bar_type] * 2) / 1000 + 0.02
             else:
                 dowel_length = 0.0
                 st.warning("Please select a valid Dowel Bar Type to calculate length.")
-
 
 
             # 🔹 Ancho promedio del panel (respetando límite de 4.2 m)
