@@ -276,10 +276,16 @@ default_costs_data = {
     ]
 }
 
-if os.path.exists(COSTS_FILE):
-    costs_df = pd.read_csv(COSTS_FILE)
-else:
-    costs_df = pd.DataFrame(default_costs_data)
+@st.cache_data(show_spinner=False)
+def load_costs(path, defaults, mtime):
+    import os
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    return pd.DataFrame(defaults)
+
+_costs_mtime = os.path.getmtime(COSTS_FILE) if os.path.exists(COSTS_FILE) else 0
+costs_df = load_costs(COSTS_FILE, default_costs_data, _costs_mtime)
+
 
 
 from PIL import Image
@@ -524,6 +530,7 @@ if st.checkbox("Show Editable Cost Table"):
         # 🔹 Guardar edición automáticamente
         if edited_df is not None:
             edited_df.to_csv(COSTS_FILE, index=False)
+            st.cache_data.clear()   # 🔄 limpiar caché para que load_costs recargue
             cost_dict = dict(zip(edited_df["Element"], edited_df["Cost"]))
 
 else:
