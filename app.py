@@ -660,7 +660,7 @@ with st.expander("🔹 Dowels"):
             use_manual_length = st.checkbox("Enter Dowel Length Manually?")
             
             if use_manual_length:
-                dowel_length = st.number_input("Dowel Length (m)", min_value=0.0, value=0.0, key="dowel_len_manual")
+                dowel_length = float_input("Dowel Length (m)", key="dowel_len_manual_text", default=0.0, decimals=4, min_value=0.0)
             elif dowel_bar_type:
                 dowel_length = (40 * bar_diameter_lookup[dowel_bar_type] * 2) / 1000 + 0.02
             else:
