@@ -539,7 +539,7 @@ st.markdown(f"""
 
 # 🧭 Navegación principal — el módulo de Columnas se implementará aquí
 # una vez definidos sus criterios de cálculo (pendiente de confirmar con el usuario)
-tab_muros, tab_columnas = st.tabs([":material/apartment: Walls", ":material/account_balance: Columns"])
+tab_muros, tab_columnas = st.tabs(["Walls", "Columns"])
 
 with tab_columnas:
     st.info(
