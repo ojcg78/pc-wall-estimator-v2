@@ -649,9 +649,16 @@ with st.expander("🪢 Reinforcement"):
     if extra_steel_kg > 0:
         st.write(f"➕ Additional Steel: {extra_steel_kg:.2f} kg")
 
-    # 🔸 Total general
-    total_steel_weight = total_section_weight + reo_rate_kg_total + extra_steel_kg
-    st.success(f"🔸 Total Steel Reinforcement: {total_steel_weight:.2f} kg")
+    # 🔸 Total general (PREVIA, sin waste — el waste % se define más abajo,
+    # en "Waste Factors", así que todavía no se puede aplicar aquí).
+    # ✅ CORREGIDO (Bug 3): antes esta variable se llamaba "total_steel_weight",
+    # el mismo nombre que se reasignaba más abajo con el waste ya aplicado.
+    # El número que se mostraba aquí en pantalla NO incluía waste, pero el
+    # usuario no tenía forma de saberlo porque el rótulo no lo aclaraba y el
+    # nombre de la variable era idéntico al del total "real". Se renombra para
+    # que sea imposible confundirlos, y se aclara en el texto.
+    total_steel_weight_preview = total_section_weight + reo_rate_kg_total + extra_steel_kg
+    st.success(f"🔸 Total Steel Reinforcement (before waste %): {total_steel_weight_preview:.2f} kg")
 
     # 🔚 Mostrar total de secciones solamente
     st.success(f"🔸 Total Combined Steel Weight (sections only): {total_section_weight:.2f} kg")
@@ -694,14 +701,17 @@ with st.expander("🔹 Dowels"):
 
 
             # 🔹 Número de dowels por panel
-            if dowel_spacing > 0:
+            if dowel_spacing > 0 and dowel_bar_type:
                 dowels_per_panel = avg_panel_width / (dowel_spacing / 1000)
                 dowels_per_panel = int(dowels_per_panel) + (1 if dowels_per_panel % 1 > 0 else 0)
                 total_dowels = dowels_per_panel * number_of_panels
                 total_dowel_weight = total_dowels * dowel_length * steel_weight_lookup[dowel_bar_type]
             else:
                 total_dowel_weight = 0
-                st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.")
+                if dowel_spacing > 0 and not dowel_bar_type:
+                    st.warning("Please select a Dowel Bar Type to calculate dowels.")
+                elif dowel_spacing <= 0:
+                    st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.")
 
 
 
@@ -790,10 +800,6 @@ trimer_bar_m2 = trimer_bar_total / wall_area if wall_area > 0 else 0
 additional_reinforcement_kg_total = extra_steel_kg
 
 
-# 🔹 Cálculo del peso total por m²
-total_steel_weight_m2 = total_steel_weight / wall_area if wall_area > 0 else 0
-
-
 # 📌 Cálculo del volumen de concreto
 concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
 
@@ -805,7 +811,7 @@ with st.expander("♻️ Waste Factors (Optional)"):
     waste_items = {
         "Concrete": concrete_volume,
         "Steel Bars (H+V)": bars_weight_total,
-        "Trimmer Bar": trimer_bar_total,
+        "Trimer Bar": trimer_bar_total,
         "Mesh": mesh_weight_total,
         "Ripbox": ripbox
     }
@@ -826,7 +832,7 @@ with st.expander("♻️ Waste Factors (Optional)"):
     # Asignar a las variables usadas en cálculos
     waste_concrete = waste_percentages.get("Concrete", 0.0)
     waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
-    waste_trimmer = waste_percentages.get("Trimmer Bar", 0.0)
+    waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
     waste_mesh = waste_percentages.get("Mesh", 0.0)
     waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
@@ -839,38 +845,42 @@ total_steel_weight = (
     additional_reinforcement_kg_total
 )
 
-  
-# Cálculo de pesos individuales para costos separados
-bars_weight_kg = bars_weight_m2 * wall_area
-reo_rate_kg = (reo_rate * (wall_thickness / 1000)) * wall_area if reo_rate > 0 else 0
+# ✅ CORREGIDO (Bug 3, parte 2): este cálculo estaba ANTES en el archivo
+# (antes del bloque de Waste Factors) y usaba el total de acero SIN waste,
+# porque en ese punto todavía no existía el total con waste. El resultado
+# ("Total Steel per m²" que se muestra al final) no coincidía con el peso
+# total real usado para costear. Ahora se calcula aquí, después de que
+# total_steel_weight ya tiene su valor final (con waste incluido).
+total_steel_weight_m2 = total_steel_weight / wall_area if wall_area > 0 else 0
 
-
-# 🟧 Obtener los datos de la primera sección de refuerzo
+# 🟧 Datos de referencia de la primera sección (se mantienen por compatibilidad
+# con el resto del archivo, que aún los usa para mostrar/etiquetar resultados;
+# YA NO se usan para calcular el costo de la malla — ver corrección abajo).
 if detailed_sections_data:
     first_section = detailed_sections_data[0]
     mesh_type = first_section.get("mesh_type")
     mesh_reinforcement = first_section.get("mesh_reinforcement")
-
-    # Calcular total_mesh_weight correctamente para evitar errores de None
-    if mesh_reinforcement == "Yes" and mesh_type:
-        total_mesh_weight = sum([
-            calculate_mesh_weight(
-                wall_area, sec["mesh_type"], sec["mesh_placement"], apply_lap_splice
-    )
-    for sec in detailed_sections_data
-    if sec["mesh_reinforcement"] == "Yes" and sec["mesh_type"]
-])
-
-    else:
-        total_mesh_weight = 0
 else:
-    total_mesh_weight = 0
+    mesh_type = ""
+    mesh_reinforcement = "No"
 
-# ✅ Inicializar por defecto para evitar errores
-mesh_cost_per_m2 = 0
-if mesh_reinforcement == "Yes" and mesh_type in cost_dict:
-    if total_mesh_weight is not None:
-        mesh_cost_per_m2 = safe_div((total_mesh_weight * cost_dict[mesh_type]), wall_area)
+# ✅ CORREGIDO (Bug 2): el peso Y el costo de la malla ahora se calculan
+# sumando TODAS las secciones que tengan malla activada, cada una con su
+# propio tipo de malla y por lo tanto su propio costo unitario — antes solo
+# se usaba el tipo de malla de la primera sección para el costo, aunque el
+# peso sí sumaba todas las secciones (dinero no cobrado si la sección 1 no
+# tenía malla pero otra sección sí).
+total_mesh_weight = 0.0
+total_mesh_cost = 0.0
+for sec in detailed_sections_data:
+    if sec.get("mesh_reinforcement") == "Yes" and sec.get("mesh_type"):
+        sec_mesh_weight = calculate_mesh_weight(
+            wall_area, sec["mesh_type"], sec["mesh_placement"], apply_lap_splice
+        )
+        total_mesh_weight += sec_mesh_weight
+        total_mesh_cost += sec_mesh_weight * cost_dict.get(sec["mesh_type"], 0)
+
+mesh_cost_per_m2 = safe_div(total_mesh_cost, wall_area)
 
 cost_per_m2 = {
     "Concrete": (
@@ -992,34 +1002,63 @@ for label in additional_custom_elements.keys():
 # Costo unitario por elemento (basado en cost_dict)
 unit_costs = {item: cost_dict.get(item, 0) for item in quantities}
 
+# ✅ CORREGIDO (Bug 4): ÚNICA fuente de verdad para "qué costo unitario de
+# cost_dict le corresponde a cada ítem del reporte". Antes existían DOS
+# versiones distintas de esta misma lógica en el archivo (una aquí, como una
+# cadena larga de if/elif, y otra más abajo, como diccionario, para la hoja
+# de auditoría del Excel) — podían divergir si se actualizaba una sin la otra.
+# Ahora ambas partes del archivo usan este mismo diccionario `cost_mapping`.
+#
+# Para "Mesh" en particular: ya no se usa el tipo de malla de la primera
+# sección (podía ser distinto al de otras secciones — ver Bug 2). Se calcula
+# un costo unitario promedio ponderado real: costo total de malla / peso
+# total de malla, consistente con el dinero que realmente se está cobrando.
+mesh_unit_price = safe_div(total_mesh_cost, total_mesh_weight) if total_mesh_weight > 0 else 0
+
+cost_mapping = {
+    "Steel Bars (H+V)": "Steel Bars",
+    "Trimer Bar": "Steel Bars",
+    "Reo Rate": "Steel Bars",
+    "Additional Reinforcement": "Steel Bars",
+    "Dowel Bars": "Steel Bars",
+    "Mesh": None,  # se resuelve aparte con mesh_unit_price (ver abajo)
+    "Concrete": concrete_type,
+    "Concrete Testing": "Concrete Testing",
+    "Ripbox": "Ripbox",
+    "Ferrules": "Ferrule with chair",
+    "Threadbar": "Threadbar",
+    "Couplers": "Couplers",
+    "Lifting": "Lifting",
+    "Special Accessories": "Special Accessories",
+    "Wages": "Wages",
+    "Shopdrawings": "Shopdrawings",
+    "Formwork": "Formwork",
+    "Patching": "Patching",
+}
+# Agregar EO e ítems adicionales personalizados al mapping (se resuelven
+# directamente desde eo_costs / custom_additional_info, no desde cost_dict)
+for eo_label in eo_costs:
+    cost_mapping[eo_label] = eo_label
+
+
+def resolve_unit_cost(item_name):
+    """Única función que decide el costo unitario ($) de un ítem del reporte.
+    Usada tanto para la tabla en pantalla como para la hoja de auditoría del Excel."""
+    if item_name in custom_additional_info:
+        return custom_additional_info[item_name]["cost"]
+    if item_name in eo_costs:
+        return eo_costs[item_name]
+    if item_name == "Mesh":
+        return mesh_unit_price
+    mapped_item = cost_mapping.get(item_name, item_name)
+    return cost_dict.get(mapped_item, 0)
+
+
 # ➕ Crear df_costs vacío con las columnas necesarias, añadiendo los items
 df_costs = pd.DataFrame({
     "Item": list(cost_per_m2.keys()),
     "Unit": [custom_additional_info[k]["unit"] if k in custom_additional_info else units.get(k, "") for k in cost_per_m2.keys()],
-    "Unit Cost ($)": [
-        custom_additional_info[k]["cost"] if k in custom_additional_info else
-        eo_costs.get(k, 0) if k in eo_costs else
-        (cost_dict.get(section.get("mesh_type"), 0)
-        if k == "Mesh" and any(sec.get("mesh_type") for sec in detailed_sections_data if sec["mesh_reinforcement"] == "Yes")
-        else cost_dict.get("Steel Bars", 0) if k in [
-            "Steel Bars (H+V)", "Trimer Bar", "Reo Rate", "Additional Reinforcement", "Dowel Bars"
-        ]
-        else cost_dict.get(concrete_type, 0) if k == "Concrete"
-        else cost_dict.get("Concrete Testing", 0) if k == "Concrete Testing"
-        else cost_dict.get("Ripbox", 0) if k == "Ripbox"
-        else cost_dict.get("Ferrule with chair", 0) if k == "Ferrules"
-        else cost_dict.get("Threadbar", 0) if k == "Threadbar"
-        else cost_dict.get("Couplers", 0) if k == "Couplers"
-        else cost_dict.get("Lifting", 0) if k == "Lifting"
-        else cost_dict.get("Special Accessories", 0) if k == "Special Accessories"
-        else cost_dict.get("Wages", 0) if k == "Wages"
-        else cost_dict.get("Shopdrawings", 0) if k == "Shopdrawings"
-        else cost_dict.get("Formwork", 0) if k == "Formwork"
-        else cost_dict.get("Patching", 0) if k == "Patching"
-        else 0)
-        for k in cost_per_m2.keys()
-    ],
-
+    "Unit Cost ($)": [resolve_unit_cost(k) for k in cost_per_m2.keys()],
     "Total Qty for m²": [quantities.get(k, 0) for k in cost_per_m2.keys()],
     "Cost per m² ($)": list(cost_per_m2.values()),
     "Cost sharing (%)": [
@@ -1185,46 +1224,16 @@ with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
 
     summary_total = 0.0
 
-    # Construir el mapa entre los nombres en la hoja de auditoría y las claves reales en cost_dict
-    cost_mapping = {
-        "Steel Bars (H+V)": "Steel Bars",
-        "Trimer Bar": "Steel Bars",
-        "Reo Rate": "Steel Bars",
-        "Additional Reinforcement": "Steel Bars",
-        "Mesh": mesh_type if mesh_type else "Mesh",
-        "Concrete": concrete_type,
-        "Concrete Testing": "Concrete Testing",
-        "Dowel Bars": "Steel Bars",
-        "Ripbox": "Ripbox",
-        "Ferrules": "Ferrule with chair",
-        "Threadbar": "Threadbar",
-        "Couplers": "Couplers",
-        "Lifting": "Lifting",
-        "Special Accessories": "Special Accessories",
-        "Wages": "Wages",
-        "Shopdrawings": "Shopdrawings",
-        "Formwork": "Formwork",
-        "Patching": "Patching"
-    }
-
-    # Agregar EO personalizados al mapping
-    for eo_label in eo_costs:
-        cost_mapping[eo_label] = eo_label
-
+    # ✅ CORREGIDO (Bug 4): ya NO se redefine cost_mapping aquí. Se reutiliza
+    # el mismo diccionario y la misma función resolve_unit_cost() definidos
+    # arriba (antes de construir df_costs), para que la tabla en pantalla y
+    # esta hoja de auditoría del Excel usen siempre la misma fuente de verdad.
     for item in df_costs["Item"]:
         if item == "Total Cost":
             continue
 
         unit = units.get(item, "")
-        mapped_item = cost_mapping.get(item, item)
-
-        # Obtener precio unitario
-        if item in eo_costs:
-            unit_price = eo_costs[item]
-        elif mapped_item in cost_dict:
-            unit_price = cost_dict.get(mapped_item, 0)
-        else:
-            unit_price = 0
+        unit_price = resolve_unit_cost(item)
 
         # Definir ítems fijos por m² (no multiplicar)
         fixed_m2_items = ["Wages", "Shopdrawings", "Formwork", "Patching", "EO - Special FW"]
