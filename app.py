@@ -105,16 +105,31 @@ h1, h2, h3, h4 {
 }
 
 /* --- Campos de entrada --- */
-.stTextInput input, .stNumberInput input {
+/* El borde/radio va en el contenedor que envuelve TODO el control
+   (texto + botones -/+ del number_input), no en el <input> suelto —
+   así queda una sola pieza en vez de una caja rota en dos partes. */
+.stTextInput div[data-baseweb="input"], .stNumberInput div[data-baseweb="input"] {
     border-radius: 10px !important;
     border: 1px solid var(--pw-border) !important;
     background: var(--pw-card) !important;
     box-shadow: var(--pw-shadow-sm);
+    overflow: hidden;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.stTextInput input:focus, .stNumberInput input:focus {
+.stTextInput div[data-baseweb="input"]:focus-within, .stNumberInput div[data-baseweb="input"]:focus-within {
     border-color: var(--pw-teal) !important;
     box-shadow: 0 0 0 3px var(--pw-teal-light) !important;
+}
+.stTextInput input, .stNumberInput input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+.stNumberInput button {
+    background: transparent !important;
+    border: none !important;
+    border-left: 1px solid var(--pw-border) !important;
+    border-radius: 0 !important;
 }
 div[data-baseweb="select"] > div {
     border-radius: 10px !important;
