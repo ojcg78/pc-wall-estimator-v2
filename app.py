@@ -234,11 +234,12 @@ div[data-baseweb="select"]:hover > div {
 /* --- Expanders más elegantes --- */
 div[data-testid="stExpander"] {
     border: 1px solid var(--pw-border) !important;
+    border-left: 4px solid var(--pw-teal) !important;
     border-radius: 14px !important;
     background: var(--pw-card);
     margin-bottom: 0.85rem;
     box-shadow: var(--pw-shadow-sm);
-    transition: box-shadow 0.15s ease;
+    transition: box-shadow 0.15s ease, border-left-color 0.15s ease;
 }
 div[data-testid="stExpander"]:hover {
     box-shadow: var(--pw-shadow-md);
@@ -246,20 +247,10 @@ div[data-testid="stExpander"]:hover {
 div[data-testid="stExpander"] summary {
     font-weight: 600; color: var(--pw-navy);
 }
-/* Best-effort: recolorea los iconos nativos de Streamlit (icon=":material/...")
-   para que sigan el mismo acento indigo. Si el testid cambia en otra versión
-   de Streamlit, esta regla simplemente no aplica (no rompe nada). */
-[data-testid="stIconMaterial"] {
-    color: var(--pw-teal) !important;
-}
-div[data-testid="stExpander"] [data-testid="stIconMaterial"],
-.stButton [data-testid="stIconMaterial"],
-.stDownloadButton [data-testid="stIconMaterial"] {
-    background: var(--pw-teal-light);
-    border-radius: 7px;
-    padding: 3px;
-    box-sizing: content-box;
-}
+/* Nota: Streamlit todavía no permite recolorear el ícono pasado en
+   icon=":material/...:" de un expander (limitación conocida, issue #11426
+   sin resolver). El acento de color queda en el borde izquierdo en vez
+   del ícono en sí. */
 
 /* --- Botones --- */
 .stButton > button {
