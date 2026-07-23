@@ -71,8 +71,8 @@ st.markdown("""
 }
 
 :root {
-    --pw-shadow-sm: 0 1px 2px rgba(27, 42, 74, 0.05), 0 1px 3px rgba(27, 42, 74, 0.06);
-    --pw-shadow-md: 0 2px 6px rgba(27, 42, 74, 0.07), 0 4px 12px rgba(27, 42, 74, 0.06);
+    --pw-shadow-sm: 0 1px 3px rgba(27, 42, 74, 0.09), 0 1px 2px rgba(27, 42, 74, 0.12);
+    --pw-shadow-md: 0 6px 16px rgba(27, 42, 74, 0.12), 0 2px 6px rgba(27, 42, 74, 0.10);
     --pw-navy: #1B2A4A;
     --pw-teal: #0E7C86;
     --pw-teal-light: #E6F2F2;
@@ -88,14 +88,49 @@ html, body, [class*="css"] {
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+.main, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    background-color: var(--pw-bg) !important;
+}
+
 .main {
-    background-color: var(--pw-bg);
     max-width: 100%;
     padding: 2rem 3rem;
 }
 
 h1, h2, h3, h4 {
     color: var(--pw-navy);
+}
+
+/* --- Campos de entrada (antes quedaron con el estilo por defecto de Streamlit) --- */
+.stTextInput input, .stNumberInput input {
+    border-radius: 9px !important;
+    border: 1px solid var(--pw-border) !important;
+    background: var(--pw-card) !important;
+    box-shadow: var(--pw-shadow-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.stTextInput input:focus, .stNumberInput input:focus {
+    border-color: var(--pw-teal) !important;
+    box-shadow: 0 0 0 3px var(--pw-teal-light) !important;
+}
+div[data-baseweb="select"] > div {
+    border-radius: 9px !important;
+    border-color: var(--pw-border) !important;
+    background: var(--pw-card) !important;
+    box-shadow: var(--pw-shadow-sm);
+}
+div[data-baseweb="select"]:hover > div {
+    border-color: var(--pw-teal) !important;
+}
+.stTextInput label p, .stNumberInput label p, .stSelectbox label p,
+.stRadio label p, .stCheckbox label p, .stTextInput label, .stNumberInput label,
+.stSelectbox label, .stRadio label, .stCheckbox label {
+    font-weight: 500 !important;
+    color: var(--pw-navy) !important;
+    font-size: 14.5px !important;
+}
+.stRadio > div, .stCheckbox {
+    padding: 2px 0;
 }
 
 /* --- Encabezado de la app --- */
