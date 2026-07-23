@@ -53,7 +53,7 @@ if not check_password():
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0,0&display=swap');
 
 .pw-icon {
@@ -72,17 +72,18 @@ st.markdown("""
 }
 
 :root {
-    --pw-shadow-sm: 0 1px 3px rgba(27, 42, 74, 0.09), 0 1px 2px rgba(27, 42, 74, 0.12);
-    --pw-shadow-md: 0 6px 16px rgba(27, 42, 74, 0.12), 0 2px 6px rgba(27, 42, 74, 0.10);
-    --pw-navy: #1B2A4A;
-    --pw-teal: #0E7C86;
-    --pw-teal-light: #E6F2F2;
-    --pw-bg: #F5F6F8;
+    --pw-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+    --pw-shadow-md: 0 4px 8px rgba(15, 23, 42, 0.06), 0 10px 22px rgba(15, 23, 42, 0.08);
+    --pw-navy: #0F172A;
+    --pw-teal: #4F46E5;
+    --pw-teal-dark: #4338CA;
+    --pw-teal-light: #EEF2FF;
+    --pw-bg: #F8FAFC;
     --pw-card: #FFFFFF;
-    --pw-border: #E2E5EA;
-    --pw-text-secondary: #5B6472;
-    --pw-success-bg: #EAF6EE;
-    --pw-success-text: #15803D;
+    --pw-border: #E2E8F0;
+    --pw-text-secondary: #64748B;
+    --pw-success-bg: #ECFDF5;
+    --pw-success-text: #047857;
 }
 
 html, body, [class*="css"] {
@@ -102,9 +103,9 @@ h1, h2, h3, h4 {
     color: var(--pw-navy);
 }
 
-/* --- Campos de entrada (antes quedaron con el estilo por defecto de Streamlit) --- */
+/* --- Campos de entrada --- */
 .stTextInput input, .stNumberInput input {
-    border-radius: 9px !important;
+    border-radius: 10px !important;
     border: 1px solid var(--pw-border) !important;
     background: var(--pw-card) !important;
     box-shadow: var(--pw-shadow-sm);
@@ -115,7 +116,7 @@ h1, h2, h3, h4 {
     box-shadow: 0 0 0 3px var(--pw-teal-light) !important;
 }
 div[data-baseweb="select"] > div {
-    border-radius: 9px !important;
+    border-radius: 10px !important;
     border-color: var(--pw-border) !important;
     background: var(--pw-card) !important;
     box-shadow: var(--pw-shadow-sm);
@@ -134,6 +135,27 @@ div[data-baseweb="select"]:hover > div {
     padding: 2px 0;
 }
 
+/* --- Iconos con volumen real (badge circular con degradado y sombra "soft 3D") --- */
+.pw-icon-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border-radius: 9px;
+    background: linear-gradient(150deg, #818CF8, var(--pw-teal-dark));
+    box-shadow:
+        inset 0 1px 1px rgba(255,255,255,0.35),
+        inset 0 -3px 5px rgba(0,0,0,0.16),
+        0 2px 6px rgba(67,56,202,0.28);
+}
+.pw-icon-badge .pw-icon {
+    color: #FFFFFF !important;
+}
+.pw-card-title .pw-icon-badge, .subtitle .pw-icon-badge {
+    width: 24px; height: 24px; border-radius: 8px; margin-right: 2px;
+}
+.pw-card-title .pw-icon-badge .pw-icon, .subtitle .pw-icon-badge .pw-icon {
+    font-size: 14px !important;
+}
+
 /* --- Encabezado de la app --- */
 .pw-header {
     display: flex;
@@ -141,13 +163,13 @@ div[data-baseweb="select"]:hover > div {
     justify-content: space-between;
     background: var(--pw-card);
     border: 1px solid var(--pw-border);
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 1.1rem 1.75rem;
     margin-bottom: 1.5rem;
     box-shadow: var(--pw-shadow-md);
 }
 .pw-header-left { display: flex; align-items: center; gap: 16px; }
-.pw-header-title { font-size: 21px; font-weight: 700; color: var(--pw-navy); margin: 0; letter-spacing: -0.01em; }
+.pw-header-title { font-size: 21px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
 .pw-header-subtitle { font-size: 13px; color: var(--pw-text-secondary); margin: 2px 0 0 0; }
 .pw-badge {
     background: var(--pw-success-bg); color: var(--pw-success-text);
@@ -168,11 +190,10 @@ div[data-baseweb="select"]:hover > div {
     transition: box-shadow 0.15s ease;
 }
 .pw-card-title {
-    font-size: 13px; font-weight: 600; color: var(--pw-text-secondary);
-    text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.75rem 0;
-    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--pw-text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.85rem 0;
+    display: flex; align-items: center; gap: 10px;
 }
-.pw-card-title .pw-icon { font-size: 17px; color: var(--pw-teal); }
 
 /* --- Tarjetas de métricas (resultados) --- */
 .pw-metric-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -184,17 +205,30 @@ div[data-baseweb="select"]:hover > div {
     transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 .pw-metric:hover { box-shadow: var(--pw-shadow-md); transform: translateY(-1px); }
-.pw-metric-accent { background: var(--pw-teal); border-color: var(--pw-teal); box-shadow: var(--pw-shadow-md); }
-.pw-metric-icon {
-    width: 34px; height: 34px; border-radius: 9px;
-    background: var(--pw-teal-light); color: var(--pw-teal);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 19px; margin-bottom: 10px;
+.pw-metric-accent {
+    background: linear-gradient(135deg, #6366F1, var(--pw-teal-dark));
+    border-color: var(--pw-teal-dark);
+    box-shadow: var(--pw-shadow-md);
 }
-.pw-metric-accent .pw-metric-icon { background: rgba(255,255,255,0.18); color: #FFFFFF; }
+.pw-metric-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(150deg, #818CF8, var(--pw-teal-dark));
+    color: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 12px;
+    box-shadow:
+        inset 0 1px 1px rgba(255,255,255,0.35),
+        inset 0 -3px 6px rgba(0,0,0,0.16),
+        0 2px 6px rgba(67,56,202,0.28);
+}
+.pw-metric-accent .pw-metric-icon {
+    background: rgba(255,255,255,0.16);
+    color: #FFFFFF;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+}
 .pw-metric-label { font-size: 12px; color: var(--pw-text-secondary); margin: 0 0 4px 0; }
 .pw-metric-accent .pw-metric-label { color: rgba(255,255,255,0.85); }
-.pw-metric-value { font-size: 25px; font-weight: 700; color: var(--pw-navy); margin: 0; letter-spacing: -0.01em; }
+.pw-metric-value { font-size: 25px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
 .pw-metric-accent .pw-metric-value { color: #FFFFFF; }
 
 /* --- Expanders más elegantes --- */
@@ -212,10 +246,24 @@ div[data-testid="stExpander"]:hover {
 div[data-testid="stExpander"] summary {
     font-weight: 600; color: var(--pw-navy);
 }
+/* Best-effort: recolorea los iconos nativos de Streamlit (icon=":material/...")
+   para que sigan el mismo acento indigo. Si el testid cambia en otra versión
+   de Streamlit, esta regla simplemente no aplica (no rompe nada). */
+[data-testid="stIconMaterial"] {
+    color: var(--pw-teal) !important;
+}
+div[data-testid="stExpander"] [data-testid="stIconMaterial"],
+.stButton [data-testid="stIconMaterial"],
+.stDownloadButton [data-testid="stIconMaterial"] {
+    background: var(--pw-teal-light);
+    border-radius: 7px;
+    padding: 3px;
+    box-sizing: content-box;
+}
 
 /* --- Botones --- */
 .stButton > button {
-    border-radius: 9px !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
     transition: box-shadow 0.15s ease, transform 0.1s ease !important;
 }
@@ -224,17 +272,17 @@ div[data-testid="stExpander"] summary {
     transform: translateY(-1px);
 }
 .stDownloadButton > button {
-    background: var(--pw-teal) !important;
+    background: linear-gradient(135deg, #6366F1, var(--pw-teal-dark)) !important;
     color: white !important;
     border: none !important;
-    border-radius: 9px !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
     margin-top: 1rem;
-    box-shadow: var(--pw-shadow-sm) !important;
+    box-shadow: 0 2px 6px rgba(67,56,202,0.3) !important;
     transition: box-shadow 0.15s ease, transform 0.1s ease !important;
 }
 .stDownloadButton > button:hover {
-    box-shadow: var(--pw-shadow-md) !important;
+    box-shadow: 0 4px 12px rgba(67,56,202,0.38) !important;
     transform: translateY(-1px);
 }
 
@@ -243,8 +291,14 @@ button[data-baseweb="tab"] {
     font-weight: 600 !important;
     font-size: 15px !important;
 }
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--pw-teal) !important;
+}
+div[data-baseweb="tab-highlight"] {
+    background-color: var(--pw-teal) !important;
+}
 
-/* --- Detalles heredados que seguían siendo útiles --- */
+/* --- Detalles heredados que siguen siendo útiles --- */
 hr {
     border: none;
     border-top: 1px solid var(--pw-border);
@@ -258,7 +312,7 @@ hr {
     margin-top: 1rem;
 }
 
-/* --- Tarjetas de resultados detallados (heredadas, restyle con la nueva paleta) --- */
+/* --- Tarjetas de resultados detallados --- */
 .card {
     background-color: var(--pw-card);
     border: 1px solid var(--pw-border);
@@ -268,15 +322,14 @@ hr {
     box-shadow: var(--pw-shadow-sm);
 }
 .subtitle {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 700;
     color: var(--pw-navy);
-    padding-bottom: 8px;
-    margin-bottom: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
     border-bottom: 1px solid var(--pw-border);
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 10px;
 }
-.subtitle .pw-icon { font-size: 18px; color: var(--pw-teal); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1401,7 +1454,7 @@ with tab_muros:
             # 🔸 📌 Concrete Info
             st.markdown(f"""
             <div class="card">
-                <div class="subtitle"><span class="pw-icon">foundation</span>Concrete Information</div>
+                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">foundation</span></span>Concrete Information</div>
                 <ul>
                     <li><b>Concrete Volume:</b> {(concrete_volume * (1 + waste_concrete / 100)):.2f} m³</li>
                     <li><b>Concrete Testing:</b> {concrete_volume:.2f} m³</li>
@@ -1412,7 +1465,7 @@ with tab_muros:
             # 🔸 📌 Steel Summary con Breakdown como expander
             st.markdown(f"""
             <div class="card">
-                <div class="subtitle"><span class="pw-icon">hardware</span>Steel Reinforcement Summary</div>
+                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">hardware</span></span>Steel Reinforcement Summary</div>
                 <ul>
                     <li><b>Total Steel Weight:</b> {total_steel_weight:.2f} kg</li>
                     <li><b>Total Steel per m²:</b> {total_steel_weight_m2:.2f} kg/m²</li>
@@ -1423,7 +1476,7 @@ with tab_muros:
             with st.expander("View Reinforcement Breakdown", icon=":material/table_rows:", expanded=False):
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle"><span class="pw-icon">table_rows</span>Breakdown of Steel Reinforcement</div>
+                    <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">table_rows</span></span>Breakdown of Steel Reinforcement</div>
                     <table style="width:100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background-color: #f0f0f0;">
@@ -1468,7 +1521,7 @@ with tab_muros:
             if any(k in cost_per_m2 for k in ["Ripbox", "Ferrules", "Threadbar", "Couplers", "Lifting", "Special Accessories"]):
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle"><span class="pw-icon">inventory_2</span>Additional Elements Summary</div>
+                    <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">inventory_2</span></span>Additional Elements Summary</div>
                     <ul>
                 """, unsafe_allow_html=True)
 
@@ -1481,7 +1534,7 @@ with tab_muros:
             if eo_costs:
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle"><span class="pw-icon">add_circle</span>EO Items (Optional)</div>
+                    <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">add_circle</span></span>EO Items (Optional)</div>
                     <ul>
                 """, unsafe_allow_html=True)
 
