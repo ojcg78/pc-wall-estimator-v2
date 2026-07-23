@@ -74,16 +74,17 @@ st.markdown("""
 :root {
     --pw-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
     --pw-shadow-md: 0 4px 8px rgba(15, 23, 42, 0.06), 0 10px 22px rgba(15, 23, 42, 0.08);
-    --pw-navy: #0F172A;
-    --pw-teal: #4F46E5;
-    --pw-teal-dark: #4338CA;
-    --pw-teal-light: #EEF2FF;
-    --pw-bg: #F8FAFC;
+    --pw-navy: #1A1A18;
+    --pw-teal: #B8912F;
+    --pw-teal-dark: #8A6A1E;
+    --pw-teal-light: #F6EFDC;
+    --pw-bg: #F4F3F1;
     --pw-card: #FFFFFF;
-    --pw-border: #E2E8F0;
-    --pw-text-secondary: #64748B;
+    --pw-border: #E4E1D9;
+    --pw-text-secondary: #6B6660;
     --pw-success-bg: #ECFDF5;
     --pw-success-text: #047857;
+    --pw-ink: #131311;
 }
 
 html, body, [class*="css"] {
@@ -140,14 +141,14 @@ div[data-baseweb="select"]:hover > div {
     display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     border-radius: 9px;
-    background: linear-gradient(150deg, #818CF8, var(--pw-teal-dark));
+    background: linear-gradient(150deg, #E4CB86, var(--pw-teal-dark));
     box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.35),
-        inset 0 -3px 5px rgba(0,0,0,0.16),
-        0 2px 6px rgba(67,56,202,0.28);
+        inset 0 1px 1px rgba(255,255,255,0.45),
+        inset 0 -3px 5px rgba(0,0,0,0.22),
+        0 2px 6px rgba(138,106,30,0.35);
 }
 .pw-icon-badge .pw-icon {
-    color: #FFFFFF !important;
+    color: var(--pw-ink) !important;
 }
 .pw-card-title .pw-icon-badge, .subtitle .pw-icon-badge {
     width: 24px; height: 24px; border-radius: 8px; margin-right: 2px;
@@ -206,30 +207,30 @@ div[data-baseweb="select"]:hover > div {
 }
 .pw-metric:hover { box-shadow: var(--pw-shadow-md); transform: translateY(-1px); }
 .pw-metric-accent {
-    background: linear-gradient(135deg, #6366F1, var(--pw-teal-dark));
-    border-color: var(--pw-teal-dark);
+    background: linear-gradient(135deg, #2A2A26, var(--pw-ink));
+    border-color: var(--pw-ink);
     box-shadow: var(--pw-shadow-md);
 }
 .pw-metric-icon {
     width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(150deg, #818CF8, var(--pw-teal-dark));
-    color: #FFFFFF;
+    background: linear-gradient(150deg, #E4CB86, var(--pw-teal-dark));
+    color: var(--pw-ink);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; margin-bottom: 12px;
     box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.35),
-        inset 0 -3px 6px rgba(0,0,0,0.16),
-        0 2px 6px rgba(67,56,202,0.28);
+        inset 0 1px 1px rgba(255,255,255,0.45),
+        inset 0 -3px 6px rgba(0,0,0,0.22),
+        0 2px 6px rgba(138,106,30,0.35);
 }
 .pw-metric-accent .pw-metric-icon {
-    background: rgba(255,255,255,0.16);
-    color: #FFFFFF;
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.12);
+    color: var(--pw-teal);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.15);
 }
 .pw-metric-label { font-size: 12px; color: var(--pw-text-secondary); margin: 0 0 4px 0; }
-.pw-metric-accent .pw-metric-label { color: rgba(255,255,255,0.85); }
+.pw-metric-accent .pw-metric-label { color: rgba(255,255,255,0.65); }
 .pw-metric-value { font-size: 25px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
-.pw-metric-accent .pw-metric-value { color: #FFFFFF; }
+.pw-metric-accent .pw-metric-value { color: var(--pw-teal); }
 
 /* --- Expanders más elegantes --- */
 div[data-testid="stExpander"] {
@@ -263,17 +264,17 @@ div[data-testid="stExpander"] summary {
     transform: translateY(-1px);
 }
 .stDownloadButton > button {
-    background: linear-gradient(135deg, #6366F1, var(--pw-teal-dark)) !important;
-    color: white !important;
+    background: linear-gradient(135deg, #E4CB86, var(--pw-teal-dark)) !important;
+    color: var(--pw-ink) !important;
     border: none !important;
     border-radius: 10px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     margin-top: 1rem;
-    box-shadow: 0 2px 6px rgba(67,56,202,0.3) !important;
+    box-shadow: 0 2px 6px rgba(138,106,30,0.35) !important;
     transition: box-shadow 0.15s ease, transform 0.1s ease !important;
 }
 .stDownloadButton > button:hover {
-    box-shadow: 0 4px 12px rgba(67,56,202,0.38) !important;
+    box-shadow: 0 4px 12px rgba(138,106,30,0.45) !important;
     transform: translateY(-1px);
 }
 
