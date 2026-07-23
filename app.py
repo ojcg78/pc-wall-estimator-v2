@@ -53,8 +53,26 @@ if not check_password():
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0,0&display=swap');
+
+.pw-icon {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: inherit;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    vertical-align: -15%;
+}
 
 :root {
+    --pw-shadow-sm: 0 1px 2px rgba(27, 42, 74, 0.05), 0 1px 3px rgba(27, 42, 74, 0.06);
+    --pw-shadow-md: 0 2px 6px rgba(27, 42, 74, 0.07), 0 4px 12px rgba(27, 42, 74, 0.06);
     --pw-navy: #1B2A4A;
     --pw-teal: #0E7C86;
     --pw-teal-light: #E6F2F2;
@@ -87,51 +105,73 @@ h1, h2, h3, h4 {
     justify-content: space-between;
     background: var(--pw-card);
     border: 1px solid var(--pw-border);
-    border-radius: 14px;
-    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    padding: 1.1rem 1.75rem;
     margin-bottom: 1.5rem;
+    box-shadow: var(--pw-shadow-md);
 }
-.pw-header-left { display: flex; align-items: center; gap: 14px; }
-.pw-header-title { font-size: 20px; font-weight: 700; color: var(--pw-navy); margin: 0; }
-.pw-header-subtitle { font-size: 13px; color: var(--pw-text-secondary); margin: 0; }
+.pw-header-left { display: flex; align-items: center; gap: 16px; }
+.pw-header-title { font-size: 21px; font-weight: 700; color: var(--pw-navy); margin: 0; letter-spacing: -0.01em; }
+.pw-header-subtitle { font-size: 13px; color: var(--pw-text-secondary); margin: 2px 0 0 0; }
 .pw-badge {
     background: var(--pw-success-bg); color: var(--pw-success-text);
-    font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 999px;
     white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px;
 }
+.pw-badge .pw-icon { font-size: 14px; }
 
 /* --- Tarjetas de contenido --- */
 .pw-card {
     background: var(--pw-card);
     border: 1px solid var(--pw-border);
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 1rem;
+    box-shadow: var(--pw-shadow-sm);
+    transition: box-shadow 0.15s ease;
 }
 .pw-card-title {
     font-size: 13px; font-weight: 600; color: var(--pw-text-secondary);
     text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.75rem 0;
+    display: flex; align-items: center; gap: 8px;
 }
+.pw-card-title .pw-icon { font-size: 17px; color: var(--pw-teal); }
 
 /* --- Tarjetas de métricas (resultados) --- */
-.pw-metric-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; }
+.pw-metric-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 1rem; }
 .pw-metric {
-    flex: 1; min-width: 160px;
+    flex: 1; min-width: 170px;
     background: var(--pw-card); border: 1px solid var(--pw-border);
-    border-radius: 12px; padding: 1rem 1.25rem;
+    border-radius: 14px; padding: 1.1rem 1.3rem;
+    box-shadow: var(--pw-shadow-sm);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
-.pw-metric-accent { background: var(--pw-teal); border-color: var(--pw-teal); }
+.pw-metric:hover { box-shadow: var(--pw-shadow-md); transform: translateY(-1px); }
+.pw-metric-accent { background: var(--pw-teal); border-color: var(--pw-teal); box-shadow: var(--pw-shadow-md); }
+.pw-metric-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: var(--pw-teal-light); color: var(--pw-teal);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; margin-bottom: 10px;
+}
+.pw-metric-accent .pw-metric-icon { background: rgba(255,255,255,0.18); color: #FFFFFF; }
 .pw-metric-label { font-size: 12px; color: var(--pw-text-secondary); margin: 0 0 4px 0; }
 .pw-metric-accent .pw-metric-label { color: rgba(255,255,255,0.85); }
-.pw-metric-value { font-size: 24px; font-weight: 700; color: var(--pw-navy); margin: 0; }
+.pw-metric-value { font-size: 25px; font-weight: 700; color: var(--pw-navy); margin: 0; letter-spacing: -0.01em; }
 .pw-metric-accent .pw-metric-value { color: #FFFFFF; }
 
 /* --- Expanders más elegantes --- */
 div[data-testid="stExpander"] {
     border: 1px solid var(--pw-border) !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     background: var(--pw-card);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.85rem;
+    box-shadow: var(--pw-shadow-sm);
+    transition: box-shadow 0.15s ease;
+}
+div[data-testid="stExpander"]:hover {
+    box-shadow: var(--pw-shadow-md);
 }
 div[data-testid="stExpander"] summary {
     font-weight: 600; color: var(--pw-navy);
@@ -139,16 +179,27 @@ div[data-testid="stExpander"] summary {
 
 /* --- Botones --- */
 .stButton > button {
-    border-radius: 8px !important;
+    border-radius: 9px !important;
     font-weight: 600 !important;
+    transition: box-shadow 0.15s ease, transform 0.1s ease !important;
+}
+.stButton > button:hover {
+    box-shadow: var(--pw-shadow-sm) !important;
+    transform: translateY(-1px);
 }
 .stDownloadButton > button {
     background: var(--pw-teal) !important;
     color: white !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 9px !important;
     font-weight: 600 !important;
     margin-top: 1rem;
+    box-shadow: var(--pw-shadow-sm) !important;
+    transition: box-shadow 0.15s ease, transform 0.1s ease !important;
+}
+.stDownloadButton > button:hover {
+    box-shadow: var(--pw-shadow-md) !important;
+    transform: translateY(-1px);
 }
 
 /* --- Pestañas de navegación --- */
@@ -176,8 +227,9 @@ hr {
     background-color: var(--pw-card);
     border: 1px solid var(--pw-border);
     padding: 1.25rem 1.5rem;
-    border-radius: 14px;
+    border-radius: 16px;
     margin-bottom: 1rem;
+    box-shadow: var(--pw-shadow-sm);
 }
 .subtitle {
     font-size: 15px;
@@ -186,7 +238,9 @@ hr {
     padding-bottom: 8px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--pw-border);
+    display: flex; align-items: center; gap: 8px;
 }
+.subtitle .pw-icon { font-size: 18px; color: var(--pw-teal); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -384,25 +438,25 @@ logo_base64 = image_to_base64("concrete")
 st.markdown(f"""
 <div class="pw-header">
     <div class="pw-header-left">
-        <img src='data:image/png;base64,{logo_base64}' width='44' style='border-radius:10px;'/>
+        <img src='data:image/png;base64,{logo_base64}' width='44' style='border-radius:10px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
         <div>
             <p class="pw-header-title">Precast Wall Estimator</p>
-            <p class="pw-header-subtitle">Estimación de costos para elementos prefabricados</p>
+            <p class="pw-header-subtitle">Cost estimation for precast concrete elements</p>
         </div>
     </div>
-    <span class="pw-badge">● Activo</span>
+    <span class="pw-badge"><span class="pw-icon">check_circle</span> Active</span>
 </div>
 """, unsafe_allow_html=True)
 
 # 🧭 Navegación principal — el módulo de Columnas se implementará aquí
 # una vez definidos sus criterios de cálculo (pendiente de confirmar con el usuario)
-tab_muros, tab_columnas = st.tabs(["🧱 Muros", "🏛️ Columnas"])
+tab_muros, tab_columnas = st.tabs(["🧱 Walls", "🏛️ Columns"])
 
 with tab_columnas:
     st.info(
-        "El módulo de estimación de costos para **columnas** está en diseño. "
-        "Se implementará aquí una vez definidos los criterios de cálculo de refuerzo "
-        "y costo específicos para columnas (distintos a los de muros)."
+        "The **Columns** cost estimation module is in design. "
+        "It will be built here once the reinforcement and costing criteria "
+        "specific to columns (different to walls) are confirmed."
     )
 
 # 🔧 Función para calcular barras horizontales y verticales
@@ -668,11 +722,13 @@ with tab_muros:
         st.markdown(f"""
         <div class="pw-metric-row">
             <div class="pw-metric">
-                <p class="pw-metric-label">Acero total (antes de waste %)</p>
+                <div class="pw-metric-icon"><span class="pw-icon">hardware</span></div>
+                <p class="pw-metric-label">Total steel (before waste %)</p>
                 <p class="pw-metric-value">{total_steel_weight_preview:.2f} kg</p>
             </div>
             <div class="pw-metric">
-                <p class="pw-metric-label">Acero de secciones (solamente)</p>
+                <div class="pw-metric-icon"><span class="pw-icon">grid_view</span></div>
+                <p class="pw-metric-label">Steel from sections only</p>
                 <p class="pw-metric-value">{total_section_weight:.2f} kg</p>
             </div>
         </div>
@@ -1307,7 +1363,7 @@ with tab_muros:
             # 🔸 📌 Concrete Info
             st.markdown(f"""
             <div class="card">
-                <div class="subtitle">🧱 Concrete Information</div>
+                <div class="subtitle"><span class="pw-icon">foundation</span>Concrete Information</div>
                 <ul>
                     <li><b>Concrete Volume:</b> {(concrete_volume * (1 + waste_concrete / 100)):.2f} m³</li>
                     <li><b>Concrete Testing:</b> {concrete_volume:.2f} m³</li>
@@ -1318,7 +1374,7 @@ with tab_muros:
             # 🔸 📌 Steel Summary con Breakdown como expander
             st.markdown(f"""
             <div class="card">
-                <div class="subtitle">🔩 Steel Reinforcement Summary</div>
+                <div class="subtitle"><span class="pw-icon">hardware</span>Steel Reinforcement Summary</div>
                 <ul>
                     <li><b>Total Steel Weight:</b> {total_steel_weight:.2f} kg</li>
                     <li><b>Total Steel per m²:</b> {total_steel_weight_m2:.2f} kg/m²</li>
@@ -1329,7 +1385,7 @@ with tab_muros:
             with st.expander("🔍 View Reinforcement Breakdown", expanded=False):
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle">🧱 Breakdown of Steel Reinforcement</div>
+                    <div class="subtitle"><span class="pw-icon">table_rows</span>Breakdown of Steel Reinforcement</div>
                     <table style="width:100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background-color: #f0f0f0;">
@@ -1374,7 +1430,7 @@ with tab_muros:
             if any(k in cost_per_m2 for k in ["Ripbox", "Ferrules", "Threadbar", "Couplers", "Lifting", "Special Accessories"]):
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle">📦 Additional Elements Summary</div>
+                    <div class="subtitle"><span class="pw-icon">inventory_2</span>Additional Elements Summary</div>
                     <ul>
                 """, unsafe_allow_html=True)
 
@@ -1387,7 +1443,7 @@ with tab_muros:
             if eo_costs:
                 st.markdown(f"""
                 <div class="card">
-                    <div class="subtitle">➕ EO Items (Optional)</div>
+                    <div class="subtitle"><span class="pw-icon">add_circle</span>EO Items (Optional)</div>
                     <ul>
                 """, unsafe_allow_html=True)
 
@@ -1404,7 +1460,8 @@ with tab_muros:
 
         st.markdown(f"""
             <div class="pw-metric pw-metric-accent" style="text-align:center; padding: 1.5rem;">
-                <p class="pw-metric-label" style="font-size:14px;">Costo total por m²</p>
+                <div class="pw-metric-icon" style="margin: 0 auto 10px;"><span class="pw-icon">payments</span></div>
+                <p class="pw-metric-label" style="font-size:14px;">Total cost per m²</p>
                 <p class="pw-metric-value" style="font-size:32px;">${total_cost_per_m2:.2f}</p>
             </div>
         """, unsafe_allow_html=True)
