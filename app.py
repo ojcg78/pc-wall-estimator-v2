@@ -30,18 +30,19 @@ def check_password():
 
     if "APP_PASSWORD" not in st.secrets:
         st.error(
-            "⚠️ No se ha configurado la contraseña de la app. "
+            "No se ha configurado la contraseña de la app. "
             "Ve a la configuración de tu app en Streamlit Cloud (Settings → Secrets) "
-            "y agrega: APP_PASSWORD = \"tu_clave_aqui\""
+            "y agrega: APP_PASSWORD = \"tu_clave_aqui\"",
+            icon=":material/warning:"
         )
         st.stop()
 
     if "password_correct" not in st.session_state:
-        st.text_input("🔒 Enter Password", type="password", on_change=password_entered, key="password")
+        st.text_input(":material/lock: Enter Password", type="password", on_change=password_entered, key="password")
         return False
     elif not st.session_state["password_correct"]:
-        st.text_input("🔒 Enter Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Incorrect password, try again.")
+        st.text_input(":material/lock: Enter Password", type="password", on_change=password_entered, key="password")
+        st.error("Incorrect password, try again.", icon=":material/error:")
         return False
     else:
         return True
@@ -485,13 +486,14 @@ st.markdown(f"""
 
 # 🧭 Navegación principal — el módulo de Columnas se implementará aquí
 # una vez definidos sus criterios de cálculo (pendiente de confirmar con el usuario)
-tab_muros, tab_columnas = st.tabs(["🧱 Walls", "🏛️ Columns"])
+tab_muros, tab_columnas = st.tabs([":material/apartment: Walls", ":material/account_balance: Columns"])
 
 with tab_columnas:
     st.info(
         "The **Columns** cost estimation module is in design. "
         "It will be built here once the reinforcement and costing criteria "
-        "specific to columns (different to walls) are confirmed."
+        "specific to columns (different to walls) are confirmed.",
+        icon=":material/construction:"
     )
 
 # 🔧 Función para calcular barras horizontales y verticales
@@ -610,20 +612,20 @@ with tab_muros:
 
     # Editable Costs Table
     if st.checkbox("Show Editable Cost Table"):
-        with st.expander("🧾 Editable Costs Table", expanded=True):
+        with st.expander("Editable Costs Table", icon=":material/receipt_long:", expanded=True):
             edited_df = st.data_editor(costs_df, num_rows="dynamic")
 
-            # 🔄 Reset dentro del bloque editable
+            # Reset dentro del bloque editable
             st.markdown("---")
-            st.markdown("### ⚠️ Reset Costs to Default")
+            st.markdown("### :material/settings_backup_restore: Reset Costs to Default")
             confirm_reset = st.checkbox("I confirm I want to reset all costs to default values")
 
-            if st.button("🔄 Reset Costs", disabled=not confirm_reset, key="reset_costs_btn"):
+            if st.button("Reset Costs", icon=":material/refresh:", disabled=not confirm_reset, key="reset_costs_btn"):
                 costs_df = pd.DataFrame(default_costs_data)
                 costs_df.to_csv(COSTS_FILE, index=False)
                 st.cache_data.clear()                       # invalida la caché de load_costs
                 st.session_state["did_reset_costs"] = True  # marca que hubo reset en este render
-                st.success("✅ Costs reset to default. Reloading…")
+                st.success("Costs reset to default. Reloading…", icon=":material/check_circle:")
                 st.rerun()                                   # recarga inmediata para leer defaults
 
 
@@ -653,8 +655,8 @@ with tab_muros:
         unsafe_allow_html=True
     )
     # Agrupación de Inputs
-    # 📐 Panel Dimensions
-    with st.expander("📐 Panel Dimensions"):
+    # Panel Dimensions
+    with st.expander("Panel Dimensions", icon=":material/straighten:"):
         number_of_panels = st.number_input(
             "Number of Panels",
             min_value=0,
@@ -688,7 +690,7 @@ with tab_muros:
         )
 
 
-    with st.expander("🪟 Openings"):
+    with st.expander("Openings", icon=":material/window:"):
         has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
         if has_openings == "Yes":
             opening_area = float_input("Total Openings Area (m²)", key="opening_area_input_text", default=0.0, decimals=4, min_value=0.0)
@@ -697,34 +699,34 @@ with tab_muros:
             opening_area = 0
             number_of_openings = 0
 
-    # 🔹 Reinforcement
-    with st.expander("🪢 Reinforcement"):
+    # Reinforcement
+    with st.expander("Reinforcement", icon=":material/construction:"):
         reo_rate = st.number_input("Reo Rate (kg/m³) (optional)", min_value=0.0, value=0.0)
         use_reo_rate_only = st.radio("Use only Reo Rate or add to bars/mesh?", ["Add to bars and mesh", "Use only Reo Rate"], index=0, key="use_reo_option")
         apply_lap_splice = st.checkbox("Apply Lap Splice (40d for bars, 20% for mesh)", value=True)
         extra_steel_kg = st.number_input("Additional Steel Reinforcement (kg)", min_value=0.0, step=1.0, key="extra_steel_input_main")
 
-        # 🔸 Sub-secciones de refuerzo dentro del mismo expander
-        st.markdown("### 🟠 Bars and Mesh Sections")
+        # Sub-secciones de refuerzo dentro del mismo expander
+        st.markdown("### :material/view_agenda: Bars and Mesh Sections")
         col1, col2 = st.columns([1, 1])
         with col1:
-            if st.button("➕ Add Bars and Mesh Section"):
+            if st.button("Add Bars and Mesh Section", icon=":material/add:"):
                 st.session_state.num_detail_sections += 1
         with col2:
-            if st.button("➖ Remove Last Section") and st.session_state.num_detail_sections > 1:
+            if st.button("Remove Last Section", icon=":material/remove:") and st.session_state.num_detail_sections > 1:
                 st.session_state.num_detail_sections -= 1
 
         detailed_sections_data = []
         for i in range(st.session_state.num_detail_sections):
             with st.container(border=True):
-                st.markdown(f"### 💠 Bars and Mesh Section {i + 1}")
+                st.markdown(f"### :material/hub: Bars and Mesh Section {i + 1}")
                 section_data = detailed_reinforcement_section(i, steel_weight_lookup, mesh_weight_lookup)
                 detailed_sections_data.append(section_data)
 
     
 
-        # 📦 Steel Weight por Sección
-        st.markdown("### 📦 Steel Weight per Section")
+        # Steel Weight por Sección
+        st.markdown("### :material/inventory_2: Steel Weight per Section")
         total_section_weight = 0
         for i, section in enumerate(detailed_sections_data):
             result = calculate_section_weight(
@@ -734,16 +736,16 @@ with tab_muros:
             )
             section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"]
             total_section_weight += section_weight
-            st.write(f"🔹 Section {i+1}: {section_weight:.2f} kg")
+            st.write(f":material/label: Section {i+1}: {section_weight:.2f} kg")
 
-        # ➕ Reo Rate total
+        # Reo Rate total
         reo_rate_kg_total = (reo_rate * (wall_thickness / 1000)) * wall_area if reo_rate > 0 else 0
         if reo_rate_kg_total > 0:
-            st.write(f"➕ Reo Rate: {reo_rate_kg_total:.2f} kg")
+            st.write(f":material/add: Reo Rate: {reo_rate_kg_total:.2f} kg")
 
-        # ➕ Refuerzo adicional
+        # Refuerzo adicional
         if extra_steel_kg > 0:
-            st.write(f"➕ Additional Steel: {extra_steel_kg:.2f} kg")
+            st.write(f":material/add: Additional Steel: {extra_steel_kg:.2f} kg")
 
         # 🔸 Total general (PREVIA, sin waste — el waste % se define más abajo,
         # en "Waste Factors", así que todavía no se puede aplicar aquí).
@@ -771,8 +773,8 @@ with tab_muros:
 
 
 
-    # 🔹 Dowels (SEPARADO)
-    with st.expander("🔹 Dowels"):
+    # Dowels (SEPARADO)
+    with st.expander("Dowels", icon=":material/link:"):
         dowels = st.radio("Dowels", ["No", "Yes"])
         total_dowel_weight = 0  # 🔹 Inicialización
 
@@ -795,7 +797,7 @@ with tab_muros:
                     dowel_length = (40 * bar_diameter_lookup[dowel_bar_type] * 2) / 1000 + 0.02
                 else:
                     dowel_length = 0.0
-                    st.warning("Please select a valid Dowel Bar Type to calculate length.")
+                    st.warning("Please select a valid Dowel Bar Type to calculate length.", icon=":material/warning:")
 
 
                 # 🔹 Ancho promedio del panel (respetando límite de 4.2 m)
@@ -803,7 +805,7 @@ with tab_muros:
                     avg_panel_width = min(4.2, wall_area / number_of_panels)
                 else:
                     avg_panel_width = 0
-                    st.warning("Please enter number of panels greater than zero to calculate dowel bars.")
+                    st.warning("Please enter number of panels greater than zero to calculate dowel bars.", icon=":material/warning:")
 
 
                 # 🔹 Número de dowels por panel
@@ -815,14 +817,14 @@ with tab_muros:
                 else:
                     total_dowel_weight = 0
                     if dowel_spacing > 0 and not dowel_bar_type:
-                        st.warning("Please select a Dowel Bar Type to calculate dowels.")
+                        st.warning("Please select a Dowel Bar Type to calculate dowels.", icon=":material/warning:")
                     elif dowel_spacing <= 0:
-                        st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.")
+                        st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.", icon=":material/warning:")
 
 
 
-    # 🔹 Additional Elements (SEPARADO)
-    with st.expander("🔩 Additional Elements"):
+    # Additional Elements (SEPARADO)
+    with st.expander("Additional Elements", icon=":material/build:"):
         ripbox = st.number_input("Ripbox (m)", value=0.0)
         ferrules = st.number_input("Ferrules (units)", value=0)
         Threadbar = st.number_input("Threadbar (units)", value=0)
@@ -830,7 +832,7 @@ with tab_muros:
         lifters_per_panel = st.number_input("Lifters per Panel", value=0)
         special_accessories_per_m2 = st.number_input("Special Accessories per m²", min_value=0.0, value=0.0, step=0.1)
 
-        st.markdown("### ➕ Add Custom Additional Elements")
+        st.markdown("### :material/add_circle: Add Custom Additional Elements")
         num_custom_elements = st.number_input("How many additional elements do you want to add?", min_value=0, max_value=10, value=0)
 
         additional_custom_elements = {}
@@ -860,7 +862,7 @@ with tab_muros:
                     additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
 
 
-    with st.expander("➕ EO Items (Optional)", expanded=False):
+    with st.expander("EO Items (Optional)", icon=":material/add_circle:", expanded=False):
         num_eo = st.number_input("How many EO Items (Optional) do you want to add?", min_value=0, max_value=10, step=1, value=0)
     
         eo_costs = {}
@@ -910,7 +912,7 @@ with tab_muros:
     concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
 
         # 🔹 Waste % por elemento
-    with st.expander("♻️ Waste Factors (Optional)"):
+    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
         st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
 
         # Diccionario base con nombres legibles y claves técnicas
@@ -1383,14 +1385,15 @@ with tab_muros:
         # un reporte con ceros sin darse cuenta. Ahora solo aparece aquí, dentro
         # del bloque que ya valida que los datos del proyecto sean reales.
         st.download_button(
-            label="📥 Download Excel Report",
+            label="Download Excel Report",
+            icon=":material/download:",
             data=output.getvalue(),
             file_name=f"{project_code}_{element_type}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
         # Mostrar resultados
-        show_results = st.toggle("📊 Show Results", value=False)
+        show_results = st.toggle(":material/bar_chart: Show Results", value=False)
 
         if show_results:
             st.markdown("## 📊 Results")
@@ -1417,7 +1420,7 @@ with tab_muros:
             </div>
             """, unsafe_allow_html=True)
 
-            with st.expander("🔍 View Reinforcement Breakdown", expanded=False):
+            with st.expander("View Reinforcement Breakdown", icon=":material/table_rows:", expanded=False):
                 st.markdown(f"""
                 <div class="card">
                     <div class="subtitle"><span class="pw-icon">table_rows</span>Breakdown of Steel Reinforcement</div>
@@ -1488,8 +1491,8 @@ with tab_muros:
                 st.markdown("</ul></div>", unsafe_allow_html=True)
 
 
-        if st.toggle("💲 Show Cost Summary", value=False):
-            st.markdown("### 💲 Cost Summary (per m²)")
+        if st.toggle(":material/payments: Show Cost Summary", value=False):
+            st.markdown("### :material/payments: Cost Summary (per m²)")
             for item, cost in cost_per_m2.items():
                 st.write(f"   - **{item}:** ${cost:.2f}")
 
@@ -1502,4 +1505,4 @@ with tab_muros:
         """, unsafe_allow_html=True)
 
     else:
-            st.warning("Please enter wall area, thickness, and number of panels greater than zero to start calculations.")
+            st.warning("Please enter wall area, thickness, and number of panels greater than zero to start calculations.", icon=":material/warning:")
