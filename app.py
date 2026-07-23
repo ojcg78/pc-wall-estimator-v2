@@ -16,11 +16,19 @@ def safe_div(n, d):
 # --- Protección por contraseña simple ---
 def check_password():
     def password_entered():
-        if st.session_state["password"] == "Precast123":  # << Cambia aquí la clave que quieras
+        if st.session_state["password"] == st.secrets.get("APP_PASSWORD", ""):
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # 🔒 Borra la contraseña ingresada del estado
         else:
             st.session_state["password_correct"] = False
+
+    if "APP_PASSWORD" not in st.secrets:
+        st.error(
+            "⚠️ No se ha configurado la contraseña de la app. "
+            "Ve a la configuración de tu app en Streamlit Cloud (Settings → Secrets) "
+            "y agrega: APP_PASSWORD = \"tu_clave_aqui\""
+        )
+        st.stop()
 
     if "password_correct" not in st.session_state:
         st.text_input("🔒 Enter Password", type="password", on_change=password_entered, key="password")
@@ -1271,16 +1279,14 @@ with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
 
 
 
-# ✅ Botón de descarga
-st.download_button(
-    label="📥 Download Excel Report",
-    data=output.getvalue(),
-    file_name=f"{project_code}_{element_type}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-
-
 if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
+    st.download_button(
+        label="📥 Download Excel Report",
+        data=output.getvalue(),
+        file_name=f"{project_code}_{element_type}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
     # Mostrar resultados
     show_results = st.toggle("📊 Show Results", value=False)
 
