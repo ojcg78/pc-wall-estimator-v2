@@ -1470,12 +1470,14 @@ with tab_muros:
             """, unsafe_allow_html=True)
 
             # 🔸 📌 Steel Summary con Breakdown como expander
+            steel_per_m3 = total_steel_weight / concrete_volume if concrete_volume > 0 else 0
             st.markdown(f"""
             <div class="card">
                 <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">hardware</span></span>Steel Reinforcement Summary</div>
                 <ul>
                     <li><b>Total Steel Weight:</b> {total_steel_weight:.2f} kg</li>
                     <li><b>Total Steel per m²:</b> {total_steel_weight_m2:.2f} kg/m²</li>
+                    <li><b>Reinforcement Ratio:</b> {steel_per_m3:.1f} kg/m³ of concrete</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1551,10 +1553,19 @@ with tab_muros:
                 st.markdown("</ul></div>", unsafe_allow_html=True)
 
 
-        if st.toggle(":material/payments: Show Cost Summary", value=False):
-            st.markdown("### :material/payments: Cost Summary (per m²)")
-            for item, cost in cost_per_m2.items():
-                st.write(f"   - **{item}:** ${cost:.2f}")
+        if st.toggle(":material/payments: Show Cost Breakdown", value=False):
+            st.markdown("### :material/payments: Cost Breakdown (per m²)")
+            st.dataframe(
+                df_costs,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Unit Cost ($)": st.column_config.NumberColumn(format="$%.2f"),
+                    "Total Qty for m²": st.column_config.NumberColumn(format="%.2f"),
+                    "Cost per m² ($)": st.column_config.NumberColumn(format="$%.2f"),
+                    "Cost sharing (%)": st.column_config.NumberColumn(format="%.1f%%"),
+                }
+            )
 
         st.markdown(f"""
             <div class="pw-metric pw-metric-accent" style="text-align:center; padding: 1.5rem;">
