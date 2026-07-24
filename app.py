@@ -562,9 +562,41 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🧭 Navegación principal — el módulo de Columnas se renderiza más abajo,
-# después de que "cost_dict" ya exista (dentro de "with st.sidebar:")
-tab_muros, tab_columnas = st.tabs(["Walls", "Columns"])
+# ------------------------------------------------------------------ #
+# PROJECT SETUP — landing menu: capture the project name/code and which
+# module (Walls or Columns) to estimate. Nothing else on the page renders
+# until this is confirmed. Wrapping the Walls tab content in
+# render_walls_tab() (further below) means only the chosen module's code
+# actually runs each time — no change to any Walls calculation logic,
+# just moved inside a function so it can be called conditionally.
+# ------------------------------------------------------------------ #
+if "project_configured" not in st.session_state:
+    st.session_state.project_configured = False
+
+if not st.session_state.project_configured:
+    st.markdown("### :material/apartment: Project Setup")
+    menu_project_name = st.text_input("Project Name", key="menu_project_name", placeholder="e.g. Beard Street Apartments")
+    menu_project_code = st.text_input("Project Code", key="menu_project_code", placeholder="e.g. A4980")
+    menu_estimate_type = st.radio("What would you like to estimate?", ["Walls", "Columns"], key="menu_estimate_type", horizontal=True)
+    if st.button("Continue", icon=":material/arrow_forward:", type="primary"):
+        st.session_state.project_configured = True
+        st.session_state.project_name = menu_project_name
+        st.session_state.project_code_menu = menu_project_code
+        st.session_state.estimate_type = menu_estimate_type
+        st.rerun()
+    st.stop()
+
+menu_col1, menu_col2 = st.columns([5, 1])
+with menu_col1:
+    st.caption(
+        f"Project: **{st.session_state.get('project_name') or 'N/A'}** "
+        f"({st.session_state.get('project_code_menu') or 'N/A'}) — "
+        f"Estimating: **{st.session_state.estimate_type}**"
+    )
+with menu_col2:
+    if st.button("Change", key="menu_change_btn", icon=":material/settings_backup_restore:"):
+        st.session_state.project_configured = False
+        st.rerun()
 
 # 🔧 Función para calcular barras horizontales y verticales
 def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v):
@@ -710,11 +742,12 @@ with st.sidebar:
     else:
         cost_dict = dict(zip(costs_df["Element"], costs_df["Cost"]))
 
-with tab_columnas:
+if st.session_state.estimate_type == "Columns":
     render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                         concrete_options, float_input, safe_div)
 
-with tab_muros:
+
+def render_walls_tab():
     # 📌 Código del proyecto ingresado por el usuario
     project_code = st.text_input("Enter Project Code", placeholder="e.g. A4980 - Beard")
 
@@ -1609,3 +1642,7 @@ with tab_muros:
 
     else:
             st.warning("Please enter wall area, thickness, and number of panels greater than zero to start calculations.", icon=":material/warning:")
+
+
+if st.session_state.estimate_type == "Walls":
+    render_walls_tab()
