@@ -3,6 +3,7 @@ columns_tab.py
 ================
 Standalone Columns cost-estimation module for the Precast Wall Estimator app.
 
+
 This file is kept completely separate from app.py on purpose, so the
 already-validated Walls calculation logic is never touched. app.py only
 needs two small additions — nothing inside app.py's existing Walls code
