@@ -243,18 +243,30 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                     "I know the details lets the real quantity be entered."
                 ),
             )
-            c1, c2 = st.columns(2)
-            with c1:
-                col_dowel_bar = st.selectbox("Dowel Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_dowel_bar")
-            with c2:
-                col_dowel_qty_manual = st.number_input(
-                    "Dowels per Column (if 'I know the details')", min_value=0, value=0, step=1, key="col_dowel_qty_manual"
+
+            if col_dowel_mode == "Exclude":
+                st.caption("Dowels are excluded from this cost estimate.")
+                col_dowel_bar = ""
+                col_dowel_qty_manual = 0
+                col_dowel_length_override_mm = 0
+            else:
+                c1, c2 = st.columns(2)
+                with c1:
+                    col_dowel_bar = st.selectbox("Dowel Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_dowel_bar")
+                with c2:
+                    if col_dowel_mode == "I know the details":
+                        col_dowel_qty_manual = st.number_input(
+                            "Dowels per Column", min_value=0, value=0, step=1, key="col_dowel_qty_manual"
+                        )
+                    else:
+                        col_dowel_qty_manual = 0
+                        st.caption("Quantity = number of longitudinal bars (set in Steel Costing Method / Longitudinal Reinforcement).")
+                col_dowel_length_override_mm = st.number_input(
+                    "Dowel Length Override (mm)", min_value=0, value=0, step=1, key="col_dowel_len_mm"
                 )
-            col_dowel_length_override_mm = st.number_input(
-                "Dowel Length Override (mm)", min_value=0, value=0, step=1, key="col_dowel_len_mm"
-            )
+                st.caption("Leave the length override at 0 to calculate it automatically as 2 x 40 x bar diameter + 20mm.")
+
             col_dowel_length_override = col_dowel_length_override_mm / 1000
-            st.caption("Leave the length override at 0 to calculate it automatically as 2 x 40 x bar diameter + 20mm.")
 
     # ------------------------------------------------------------------ #
     # CALCULATIONS (bar weights, ties, dowels, reo rate)
