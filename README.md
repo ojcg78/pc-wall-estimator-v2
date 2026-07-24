@@ -1,2 +1,2 @@
-# pc-wall-estimator
- Herramienta en Streamlit para estimar costos de muros prefabricados
+# pc-elements-estimator
+ Herramienta en Streamlit para estimar costos de elementos prefabricados
