@@ -65,7 +65,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         "of columns that share the same geometry and reinforcement."
     )
 
-    col_project_code = st.text_input("Enter Project Code", placeholder="e.g. A4980 - Beard", key="col_project_code")
+    col_project_code = st.session_state.get("project_code_menu", "")
+    st.caption(f"Project Code: **{col_project_code or 'N/A'}**")
     col_group_id = st.text_input("Enter Column Group ID", placeholder="e.g. PC-01", key="col_group_id")
 
     col_sub_geom, col_sub_reo, col_sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
