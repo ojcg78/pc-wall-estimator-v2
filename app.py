@@ -4,7 +4,7 @@ import pandas as pd
 import random as rand
 from columns_tab import render_columns_tab
 
-st.set_page_config(page_title="Precast Wall Estimator", page_icon=":material/apartment:", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Precast Elements Estimator", page_icon=":material/apartment:", initial_sidebar_state="collapsed")
 
 import streamlit as st
 
