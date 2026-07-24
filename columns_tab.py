@@ -1,4 +1,4 @@
-"No ready"
+"""
 columns_tab.py
 ================
 Standalone Columns cost-estimation module for the Precast Wall Estimator app.
