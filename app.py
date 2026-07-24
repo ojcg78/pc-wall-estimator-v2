@@ -16,6 +16,7 @@ def safe_div(n, d):
         return 0.0
 
 
+
 # --- Protección por contraseña simple ---
 # ✅ CORREGIDO (riesgo crítico de seguridad): la contraseña ya NO está escrita
 # en el código. Antes decía literalmente "Precast123" aquí mismo, visible para
