@@ -561,13 +561,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🧭 Navegación principal — el módulo de Columnas se implementará aquí
-# una vez definidos sus criterios de cálculo (pendiente de confirmar con el usuario)
+# 🧭 Navegación principal — el módulo de Columnas se renderiza más abajo,
+# después de que "cost_dict" ya exista (dentro de "with st.sidebar:")
 tab_muros, tab_columnas = st.tabs(["Walls", "Columns"])
-
-with tab_columnas:
-    render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
-                        concrete_options, float_input, safe_div)
 
 # 🔧 Función para calcular barras horizontales y verticales
 def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v):
@@ -712,6 +708,10 @@ with st.sidebar:
 
     else:
         cost_dict = dict(zip(costs_df["Element"], costs_df["Cost"]))
+
+with tab_columnas:
+    render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
+                        concrete_options, float_input, safe_div)
 
 with tab_muros:
     # 📌 Código del proyecto ingresado por el usuario
