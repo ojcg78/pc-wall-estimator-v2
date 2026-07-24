@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 import random as rand
+from columns_tab import render_columns_tab
 
 st.set_page_config(page_title="Precast Wall Estimator", page_icon=":material/apartment:", initial_sidebar_state="collapsed")
 
@@ -565,12 +566,8 @@ st.markdown(f"""
 tab_muros, tab_columnas = st.tabs(["Walls", "Columns"])
 
 with tab_columnas:
-    st.info(
-        "The **Columns** cost estimation module is in design. "
-        "It will be built here once the reinforcement and costing criteria "
-        "specific to columns (different to walls) are confirmed.",
-        icon=":material/construction:"
-    )
+    render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
+                        concrete_options, float_input, safe_div)
 
 # 🔧 Función para calcular barras horizontales y verticales
 def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v):
