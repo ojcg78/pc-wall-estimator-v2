@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import random as rand
 
+st.set_page_config(page_title="Precast Wall Estimator", page_icon=":material/apartment:", initial_sidebar_state="expanded")
+
 import streamlit as st
 
 # --- Utilidad: divide solo si el denominador es > 0 ---
@@ -30,9 +32,9 @@ def check_password():
 
     if "APP_PASSWORD" not in st.secrets:
         st.error(
-            "No se ha configurado la contraseña de la app. "
-            "Ve a la configuración de tu app en Streamlit Cloud (Settings → Secrets) "
-            "y agrega: APP_PASSWORD = \"tu_clave_aqui\"",
+            "App password isn't configured. "
+            "Go to your app's settings in Streamlit Cloud (Settings → Secrets) "
+            "and add: APP_PASSWORD = \"your_password_here\"",
             icon=":material/warning:"
         )
         st.stop()
@@ -291,6 +293,20 @@ div[data-testid="stExpander"] summary {
 .stDownloadButton > button:hover {
     box-shadow: 0 4px 12px rgba(138,106,30,0.45) !important;
     transform: translateY(-1px);
+}
+
+/* --- Control para abrir/cerrar la barra lateral: más visible que el
+   default (best-effort — el testid puede variar según versión) --- */
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="stSidebarCollapseButton"] button {
+    background: var(--pw-teal) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--pw-shadow-md) !important;
+}
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg {
+    color: #FFFFFF !important;
+    fill: #FFFFFF !important;
 }
 
 /* --- Pestañas de navegación --- */
@@ -1458,7 +1474,7 @@ with tab_muros:
         # Mostrar resultados — el interruptor vive en la barra lateral (junto a
         # Cost Settings), pero acá dejamos un aviso visible para que no quede
         # escondido si alguien no se da cuenta de que existe.
-        st.info("Los resultados y el desglose de costos se activan desde la barra lateral izquierda.", icon=":material/arrow_back:")
+        st.info("Results and the cost breakdown are available in the sidebar on the left.", icon=":material/arrow_back:")
         st.sidebar.markdown("---")
         st.sidebar.caption("View options")
         show_results = st.sidebar.toggle(":material/bar_chart: Show Results", value=False)
