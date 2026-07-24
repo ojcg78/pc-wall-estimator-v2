@@ -15,35 +15,35 @@ from the Walls logic):
 
        from columns_tab import render_columns_tab
 
-2) Replace ONLY the placeholder currently inside `with tab_columnas:`:
-
-       with tab_columnas:
-           st.info(
-               "The **Columns** cost estimation module is in design. "
-               "It will be built here once the reinforcement and costing criteria "
-               "specific to columns (different to walls) are confirmed.",
-               icon=":material/construction:"
-           )
-
-   with a single function call:
+2) Inside `with tab_columnas:`, call:
 
        with tab_columnas:
            render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                                concrete_options, float_input, safe_div)
 
-   IMPORTANT — placement: `cost_dict` is only built later in app.py, inside
-   `with st.sidebar:`. The current placeholder sits BEFORE that point in the
-   file, so this replacement block must be moved to run AFTER the
-   `with st.sidebar:` block ends, and BEFORE `with tab_muros:` starts. That is
-   the only place in app.py where `cost_dict` already exists. The tabs
-   themselves (`tab_muros, tab_columnas = st.tabs(...)`) can stay exactly
-   where they are — only the `with tab_columnas:` content block needs to sit
-   in that later spot.
+   IMPORTANT — placement: `cost_dict` is only built inside `with st.sidebar:`,
+   further down in app.py. This block must run AFTER that sidebar block ends,
+   and BEFORE `with tab_muros:` starts — that is the only place in app.py
+   where `cost_dict`, `steel_weight_lookup`, `bar_diameter_lookup`,
+   `concrete_options` and `float_input` already exist.
 
-That's it — every column-specific variable, dropdown key, and calculation
-lives inside this file's function, under its own `col_` prefixed names, so
-nothing here can collide with any variable used by the Walls module in
-app.py.
+Conventions matched to the Walls module for consistency:
+- All length inputs are entered in millimetres (mm), exactly like Walls'
+  "Wall Thickness (mm)" — converted to metres internally wherever the maths
+  needs metres. Only volumes (m³) are entered directly in m³ (matching the
+  CostX convention), since those aren't a length.
+- Every input starts at zero / blank — nothing is pre-filled, exactly like
+  Walls (Number of Panels = 0, Wall Area = 0.0000, Wall Thickness = 0, bar
+  type dropdowns start blank).
+- Results follow the same sidebar pattern as Walls: a "Show Results" and a
+  "Show Cost Breakdown" toggle in the sidebar, plus a single always-visible
+  metric card at the bottom — for Columns that card shows only the
+  estimated fabrication cost per m³ (no per-column or per-group total in
+  the card, matching how Walls only shows "Total cost per m²").
+
+Every column-specific variable, dropdown key, and calculation lives inside
+this file's function, under its own `col_` prefixed names, so nothing here
+can collide with any variable used by the Walls module in app.py.
 """
 
 import streamlit as st
@@ -77,11 +77,14 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         with st.expander("Column Dimensions", icon=":material/straighten:", expanded=True):
             c1, c2, c3 = st.columns(3)
             with c1:
-                col_width = float_input("Width (m)", key="col_width_text", default=0.3, decimals=3, min_value=0.0)
+                col_width_mm = st.number_input("Width (mm)", min_value=0, value=0, step=10, key="col_width_mm")
             with c2:
-                col_depth = float_input("Depth (m)", key="col_depth_text", default=0.5, decimals=3, min_value=0.0)
+                col_depth_mm = st.number_input("Depth (mm)", min_value=0, value=0, step=10, key="col_depth_mm")
             with c3:
-                col_concrete_type = st.selectbox("Concrete Type", concrete_options, index=0, key="col_concrete_type")
+                col_concrete_type = st.selectbox("Concrete Type", [""] + concrete_options, index=0, key="col_concrete_type")
+
+            col_width = col_width_mm / 1000
+            col_depth = col_depth_mm / 1000
 
             col_geom_mode = st.radio(
                 "How is the column height known?",
@@ -111,10 +114,12 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                     col_avg_height = (col_group_volume / col_group_qty) / (col_width * col_depth)
                 else:
                     col_avg_height = 0.0
+                st.caption(f"Derived average height: {col_avg_height * 1000:,.0f} mm")
             else:
-                col_avg_height = float_input(
-                    "Average Height (m)", key="col_avg_height_text", default=0.0, decimals=3, min_value=0.0
+                col_avg_height_mm = st.number_input(
+                    "Average Height (mm)", min_value=0, value=0, step=10, key="col_avg_height_mm"
                 )
+                col_avg_height = col_avg_height_mm / 1000
                 col_group_qty = st.number_input(
                     "Number of Columns in Group (optional, for the total cost roll-up)",
                     min_value=0, value=0, step=1, key="col_group_qty_b",
@@ -127,7 +132,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 "Is the reinforcement cover known?", ["No", "Yes"], index=0, key="col_cover_known", horizontal=True
             )
             if col_cover_known == "Yes":
-                col_cover = float_input("Reo Cover (m)", key="col_cover_text", default=0.03, decimals=3, min_value=0.0)
+                col_cover_mm = st.number_input("Reo Cover (mm)", min_value=0, value=0, step=1, key="col_cover_mm")
+                col_cover = col_cover_mm / 1000
             else:
                 col_cover = 0.03
                 st.warning(
@@ -152,7 +158,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         with st.expander("Longitudinal Reinforcement", icon=":material/construction:", expanded=True):
             c1, c2 = st.columns(2)
             with c1:
-                col_long_qty = st.number_input("Number of Longitudinal Bars", min_value=0, value=8, step=1, key="col_long_qty")
+                col_long_qty = st.number_input("Number of Longitudinal Bars", min_value=0, value=0, step=1, key="col_long_qty")
             with c2:
                 col_long_bar = st.selectbox("Longitudinal Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_long_bar")
 
@@ -165,22 +171,23 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
 
             col_apply_lap = st.checkbox("Apply Lap Splice (40 x bar diameter)", value=True, key="col_apply_lap")
 
-        with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/construction:", expanded=True):
+        with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/grid_4x4:", expanded=True):
             st.markdown("###### Closed Ties")
             c1, c2, c3 = st.columns(3)
             with c1:
                 col_tie_bar = st.selectbox("Tie Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_tie_bar")
             with c2:
-                col_tie_spacing = st.number_input("Tie Spacing (mm)", min_value=0, value=200, step=10, key="col_tie_spacing")
+                col_tie_spacing_mm = st.number_input("Tie Spacing (mm)", min_value=0, value=0, step=10, key="col_tie_spacing_mm")
             with c3:
-                col_tie_perimeter_override = float_input(
-                    "Measured Tie Perimeter (m)", key="col_tie_perim_text", default=0.0, decimals=3, min_value=0.0
+                col_tie_perimeter_override_mm = st.number_input(
+                    "Measured Tie Perimeter (mm)", min_value=0, value=0, step=1, key="col_tie_perim_mm"
                 )
             st.caption(
                 "Leave the measured perimeter at 0 to calculate it from Width, Depth and Cover. "
                 "Enter it only if a detailed cross-section is available and a single tie's real "
                 "perimeter (including hooks/crossties) can be measured directly."
             )
+            col_tie_perimeter_override = col_tie_perimeter_override_mm / 1000
 
             st.markdown("###### Ligs")
             c4, c5 = st.columns(2)
@@ -209,7 +216,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             col_dowel_mode = st.radio(
                 "Dowel information",
                 ["Exclude", "Estimate (1 per longitudinal bar)", "I know the details"],
-                index=1,
+                index=0,
                 key="col_dowel_mode",
                 help=(
                     "Exclude — use only if the drawing confirms dowels don't apply. "
@@ -224,9 +231,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 col_dowel_qty_manual = st.number_input(
                     "Dowels per Column (if 'I know the details')", min_value=0, value=0, step=1, key="col_dowel_qty_manual"
                 )
-            col_dowel_length_override = float_input(
-                "Dowel Length Override (m)", key="col_dowel_len_text", default=0.0, decimals=3, min_value=0.0
+            col_dowel_length_override_mm = st.number_input(
+                "Dowel Length Override (mm)", min_value=0, value=0, step=1, key="col_dowel_len_mm"
             )
+            col_dowel_length_override = col_dowel_length_override_mm / 1000
             st.caption("Leave the length override at 0 to calculate it automatically as 2 x 40 x bar diameter + 20mm.")
 
         with st.expander("Lifting & Accessories", icon=":material/build:", expanded=True):
@@ -252,7 +260,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_long_length_2 = _col_bar_length_with_lap(col_long_qty2, col_avg_height, col_long_bar2, col_apply_lap)
     col_long_weight_2 = col_long_length_2 * steel_weight_lookup.get(col_long_bar2, 0)
 
-    col_tie_count = int(-(-col_avg_height // (col_tie_spacing / 1000))) if col_tie_spacing > 0 and col_avg_height > 0 else 0
+    col_tie_spacing_m = col_tie_spacing_mm / 1000
+    col_tie_count = int(-(-col_avg_height // col_tie_spacing_m)) if col_tie_spacing_m > 0 and col_avg_height > 0 else 0
     if col_tie_perimeter_override > 0:
         col_tie_perimeter = col_tie_perimeter_override
     else:
@@ -380,69 +389,51 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         col_total_group_cost = 0.0
 
     # ------------------------------------------------------------------ #
-    # RESULTS
+    # RESULTS — same sidebar pattern as Walls (Show Results / Show Cost
+    # Breakdown toggles), and a single always-visible metric card showing
+    # only the fabrication cost per m³ (no per-column or per-group total
+    # in the card, matching how Walls only shows "Total cost per m²").
     # ------------------------------------------------------------------ #
+    col_df_costs = pd.DataFrame({
+        "Item": ["Concrete", "Concrete Testing", "Reinforcing Steel", "Dowels", "Lifting", "Special Accessories",
+                 *col_consumables.keys(), "Wages", "Shopdrawings", "Formwork", "Patching"],
+        "Unit": ["m³", "m³", "kg", "kg", "ea", "ea",
+                 *(["$"] * len(col_consumables)), "m²", "m²", "m²", "m²"],
+        "Qty": [col_concrete_qty, col_volume_per_column, col_steel_qty, col_dowel_qty_kg, col_lifting_qty, col_accessories_qty,
+                *([1] * len(col_consumables)), col_surface_area, col_surface_area, col_surface_area, col_surface_area],
+        "Cost per Column ($)": [col_concrete_cost, col_testing_cost, col_steel_cost, col_dowel_cost,
+                                 col_lifting_cost, col_accessories_cost, *col_consumables.values(),
+                                 col_wages_cost * col_surface_area, col_shopdrawings_cost * col_surface_area,
+                                 col_formwork_cost * col_surface_area, col_patching_cost * col_surface_area],
+    })
+    col_df_costs.loc[len(col_df_costs.index)] = ["Total Cost", "", "", round(col_price_per_column, 2)]
+
     if col_volume_per_column > 0:
-        st.markdown("---")
-        st.markdown("## :material/bar_chart: Results")
+        st.info("Results and the cost breakdown are available in the sidebar on the left.", icon=":material/arrow_back:")
+        st.sidebar.markdown("---")
+        st.sidebar.caption("Columns — view options")
+        col_show_results = st.sidebar.toggle(":material/bar_chart: Show Column Results", value=False, key="col_show_results")
 
-        col_df_costs = pd.DataFrame({
-            "Item": ["Concrete", "Concrete Testing", "Reinforcing Steel", "Dowels", "Lifting", "Special Accessories",
-                     *col_consumables.keys(), "Wages", "Shopdrawings", "Formwork", "Patching"],
-            "Unit": ["m³", "m³", "kg", "kg", "ea", "ea",
-                     *(["$"] * len(col_consumables)), "m²", "m²", "m²", "m²"],
-            "Qty": [col_concrete_qty, col_volume_per_column, col_steel_qty, col_dowel_qty_kg, col_lifting_qty, col_accessories_qty,
-                    *([1] * len(col_consumables)), col_surface_area, col_surface_area, col_surface_area, col_surface_area],
-            "Cost per Column ($)": [col_concrete_cost, col_testing_cost, col_steel_cost, col_dowel_cost,
-                                     col_lifting_cost, col_accessories_cost, *col_consumables.values(),
-                                     col_wages_cost * col_surface_area, col_shopdrawings_cost * col_surface_area,
-                                     col_formwork_cost * col_surface_area, col_patching_cost * col_surface_area],
-        })
-        col_df_costs.loc[len(col_df_costs.index)] = ["Total Cost", "", "", round(col_price_per_column, 2)]
-
-        st.markdown(f"""
-        <div class="pw-metric-row">
-            <div class="pw-metric pw-metric-accent">
-                <div class="pw-metric-icon"><span class="pw-icon">payments</span></div>
-                <p class="pw-metric-label">Price per column</p>
-                <p class="pw-metric-value">${col_price_per_column:,.2f}</p>
-            </div>
-            <div class="pw-metric pw-metric-accent">
-                <div class="pw-metric-icon"><span class="pw-icon">payments</span></div>
-                <p class="pw-metric-label">Price per m³</p>
-                <p class="pw-metric-value">${col_price_per_m3:,.2f}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if col_total_group_cost > 0:
-            st.markdown(f"""
-            <div class="pw-metric-row">
-                <div class="pw-metric">
-                    <div class="pw-metric-icon"><span class="pw-icon">apartment</span></div>
-                    <p class="pw-metric-label">Estimated total group cost</p>
-                    <p class="pw-metric-value">${col_total_group_cost:,.2f}</p>
+        if col_show_results:
+            st.markdown("## :material/bar_chart: Results")
+            with st.expander("View Reinforcement Breakdown", icon=":material/table_rows:", expanded=False):
+                st.markdown(f"""
+                <div class="card">
+                    <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">hardware</span></span>Reinforcement Breakdown</div>
+                    <ul>
+                        <li><b>Longitudinal (Group 1):</b> {col_long_weight_1:.2f} kg</li>
+                        <li><b>Longitudinal (Group 2):</b> {col_long_weight_2:.2f} kg</li>
+                        <li><b>Closed Ties:</b> {col_tie_weight:.2f} kg ({col_tie_count} ties)</li>
+                        <li><b>Ligs:</b> {col_lig_weight:.2f} kg</li>
+                        <li><b>Reo Rate Estimated:</b> {col_reo_rate_estimated:.1f} kg/m³</li>
+                        <li><b>Reo Rate Used for Costing:</b> {col_reo_rate_used:.1f} kg/m³ ({col_steel_mode})</li>
+                        <li><b>Dowels:</b> {col_dowel_weight:.2f} kg ({col_dowel_qty_used} dowels, {col_dowel_mode})</li>
+                    </ul>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-        with st.expander("View Reinforcement Breakdown", icon=":material/table_rows:", expanded=False):
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">hardware</span></span>Reinforcement Breakdown</div>
-                <ul>
-                    <li><b>Longitudinal (Group 1):</b> {col_long_weight_1:.2f} kg</li>
-                    <li><b>Longitudinal (Group 2):</b> {col_long_weight_2:.2f} kg</li>
-                    <li><b>Closed Ties:</b> {col_tie_weight:.2f} kg ({col_tie_count} ties)</li>
-                    <li><b>Ligs:</b> {col_lig_weight:.2f} kg</li>
-                    <li><b>Reo Rate Estimated:</b> {col_reo_rate_estimated:.1f} kg/m³</li>
-                    <li><b>Reo Rate Used for Costing:</b> {col_reo_rate_used:.1f} kg/m³ ({col_steel_mode})</li>
-                    <li><b>Dowels:</b> {col_dowel_weight:.2f} kg ({col_dowel_qty_used} dowels, {col_dowel_mode})</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
-        if st.toggle(":material/payments: Show Cost Breakdown", value=False, key="col_show_breakdown"):
+        if st.sidebar.toggle(":material/payments: Show Column Cost Breakdown", value=False, key="col_show_breakdown"):
+            st.markdown("### :material/payments: Cost Breakdown (per column)")
             st.dataframe(
                 col_df_costs,
                 hide_index=True,
@@ -450,8 +441,18 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 column_config={"Cost per Column ($)": st.column_config.NumberColumn(format="$%.2f")},
             )
 
+        st.markdown(f"""
+            <div class="pw-metric pw-metric-accent" style="text-align:center; padding: 1.5rem;">
+                <div class="pw-metric-icon" style="margin: 0 auto 10px;"><span class="pw-icon">payments</span></div>
+                <p class="pw-metric-label" style="font-size:14px;">Estimated fabrication cost per m³</p>
+                <p class="pw-metric-value" style="font-size:32px;">${col_price_per_m3:,.2f}</p>
+            </div>
+        """, unsafe_allow_html=True)
+
         # -------------------------------------------------------------- #
-        # EXCEL EXPORT
+        # EXCEL EXPORT — the full per-column and per-group totals still
+        # go into the download (useful for the project record), even
+        # though they're no longer shown as cards on screen.
         # -------------------------------------------------------------- #
         col_output = BytesIO()
         with pd.ExcelWriter(col_output, engine="xlsxwriter") as writer:
@@ -460,8 +461,11 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             worksheet = writer.sheets["Report"]
             worksheet.write("A1", f"Project Code: {col_project_code}" if col_project_code else "Project Code: N/A")
             worksheet.write("A2", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A")
-            worksheet.write("A3", f"Width x Depth: {col_width} x {col_depth} m, Avg Height: {col_avg_height:.2f} m")
+            worksheet.write("A3", f"Width x Depth: {col_width_mm} x {col_depth_mm} mm, Avg Height: {col_avg_height * 1000:.0f} mm")
             worksheet.write("A4", f"Concrete: {col_concrete_type}, Reo Rate Used: {col_reo_rate_used:.1f} kg/m3")
+            worksheet.write("A5", f"Price per Column: ${col_price_per_column:,.2f} | Price per m3: ${col_price_per_m3:,.2f}")
+            if col_total_group_cost > 0:
+                worksheet.write("A6", f"Estimated Total Group Cost: ${col_total_group_cost:,.2f}")
 
             bold_format = workbook.add_format({"bold": True})
             money_format = workbook.add_format({"num_format": "$#,##0.00"})
@@ -472,14 +476,14 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             audit_sheet.write("A1", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A", bold_format)
             audit_sheet.write("A3", "COLUMN INPUTS", bold_format)
             audit_rows = [
-                ("Width (m)", col_width), ("Depth (m)", col_depth),
-                ("Geometry Mode", col_geom_mode), ("Average Height Used (m)", col_avg_height),
+                ("Width (mm)", col_width_mm), ("Depth (mm)", col_depth_mm),
+                ("Geometry Mode", col_geom_mode), ("Average Height Used (mm)", round(col_avg_height * 1000, 0)),
                 ("Volume per Column (m3)", col_volume_per_column),
-                ("Reo Cover Known", col_cover_known), ("Reo Cover Used (m)", col_cover),
+                ("Reo Cover Known", col_cover_known), ("Reo Cover Used (mm)", round(col_cover * 1000, 0)),
                 ("Longitudinal Bars (Group 1)", f"{col_long_qty} x {col_long_bar}"),
                 ("Longitudinal Bars (Group 2)", f"{col_long_qty2} x {col_long_bar2}" if col_long_bar2 else "n/a"),
-                ("Tie Bar / Spacing", f"{col_tie_bar} @ {col_tie_spacing}mm"),
-                ("Tie Perimeter (measured override)", col_tie_perimeter_override if col_tie_perimeter_override > 0 else "auto"),
+                ("Tie Bar / Spacing", f"{col_tie_bar} @ {col_tie_spacing_mm}mm"),
+                ("Tie Perimeter (measured override, mm)", col_tie_perimeter_override_mm if col_tie_perimeter_override_mm > 0 else "auto"),
                 ("Lig Bar / Qty per Level", f"{col_lig_bar} x {col_lig_qty}"),
                 ("Steel Costing Mode", col_steel_mode),
                 ("Reo Rate Given (kg/m3)", col_reo_rate_given),
@@ -488,6 +492,9 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 ("Dowels per Column (used)", col_dowel_qty_used),
                 ("Lifting Points per Column", col_lifting_qty),
                 ("Special Accessories per Column", col_accessories_qty),
+                ("Price per Column ($)", round(col_price_per_column, 2)),
+                ("Price per m3 ($)", round(col_price_per_m3, 2)),
+                ("Estimated Total Group Cost ($)", round(col_total_group_cost, 2) if col_total_group_cost > 0 else "n/a"),
             ]
             r = 4
             for label, value in audit_rows:
