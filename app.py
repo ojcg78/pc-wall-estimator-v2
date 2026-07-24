@@ -663,14 +663,7 @@ def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panel
 
 
 
-with tab_muros:
-    # 📌 Código del proyecto ingresado por el usuario
-    project_code = st.text_input("Enter Project Code", placeholder="e.g. A4980 - Beard")
-
-    # 📌 Código del proyecto ingresado por el usuario
-    element_type = st.text_input("Enter Element Type", placeholder="e.g. PT1")
-
-    st.markdown("---")
+with st.sidebar:
     st.markdown("##### :material/settings: Cost Settings")
     st.caption("Unit prices used across all projects — not specific to this element.")
 
@@ -707,6 +700,13 @@ with tab_muros:
     else:
         cost_dict = dict(zip(costs_df["Element"], costs_df["Cost"]))
 
+with tab_muros:
+    # 📌 Código del proyecto ingresado por el usuario
+    project_code = st.text_input("Enter Project Code", placeholder="e.g. A4980 - Beard")
+
+    # 📌 Código del proyecto ingresado por el usuario
+    element_type = st.text_input("Enter Element Type", placeholder="e.g. PT1")
+
     # 🔹 Ajustar el ancho de la hoja con CSS personalizado
     st.markdown(
         """
@@ -718,277 +718,291 @@ with tab_muros:
         """,
         unsafe_allow_html=True
     )
-    # Agrupación de Inputs
-    # Panel Dimensions
-    with st.expander("Panel Dimensions", icon=":material/straighten:"):
-        number_of_panels = st.number_input(
-            "Number of Panels",
-            min_value=0,
-            value=0,
-            step=1,
-            key="num_panels_input",
-        )
 
-        wall_area = float_input(
-            "Total Wall Area (m²)",
-            key="wall_area_input_text",
-            default=0.0,
-            decimals=4,
-            min_value=0.0,
-        )
+    sub_geom, sub_reo, sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
+
+    with sub_geom:
+        # Panel Dimensions
+        with st.expander("Panel Dimensions", icon=":material/straighten:", expanded=True):
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                number_of_panels = st.number_input(
+                    "Number of Panels",
+                    min_value=0,
+                    value=0,
+                    step=1,
+                    key="num_panels_input",
+                )
+            with col2:
+                wall_area = float_input(
+                    "Total Wall Area (m²)",
+                    key="wall_area_input_text",
+                    default=0.0,
+                    decimals=4,
+                    min_value=0.0,
+                )
+            with col3:
+                wall_thickness = st.number_input(
+                    "Wall Thickness (mm)",
+                    min_value=0,
+                    value=0,
+                    step=10,
+                    key="wall_thickness_input",
+                )
+            with col4:
+                concrete_type = st.selectbox(
+                    "Concrete Type",
+                    concrete_options,
+                    index=0,
+                    key="concrete_type_select",
+                )
+
+        with st.expander("Openings", icon=":material/window:"):
+            has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
+            if has_openings == "Yes":
+                col1, col2 = st.columns(2)
+                with col1:
+                    opening_area = float_input("Total Openings Area (m²)", key="opening_area_input_text", default=0.0, decimals=4, min_value=0.0)
+                with col2:
+                    number_of_openings = st.number_input("Number of Openings", min_value=0, value=0)
+            else:
+                opening_area = 0
+                number_of_openings = 0
+
+    with sub_reo:
+        # Reinforcement
+        with st.expander("Reinforcement", icon=":material/construction:", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                reo_rate = st.number_input("Reo Rate (kg/m³) (optional)", min_value=0.0, value=0.0)
+            with col2:
+                extra_steel_kg = st.number_input("Additional Steel Reinforcement (kg)", min_value=0.0, step=1.0, key="extra_steel_input_main")
+            use_reo_rate_only = st.radio("Use only Reo Rate or add to bars/mesh?", ["Add to bars and mesh", "Use only Reo Rate"], index=0, key="use_reo_option")
+            apply_lap_splice = st.checkbox("Apply Lap Splice (40d for bars, 20% for mesh)", value=True)
+
+        with st.expander("Reinforcement — Detailed Sections (Bars & Mesh)", icon=":material/view_agenda:"):
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("Add Bars and Mesh Section", icon=":material/add:"):
+                    st.session_state.num_detail_sections += 1
+            with col2:
+                if st.button("Remove Last Section", icon=":material/remove:") and st.session_state.num_detail_sections > 1:
+                    st.session_state.num_detail_sections -= 1
+
+            detailed_sections_data = []
+            for i in range(st.session_state.num_detail_sections):
+                with st.container(border=True):
+                    st.markdown(f"### :material/hub: Bars and Mesh Section {i + 1}")
+                    section_data = detailed_reinforcement_section(i, steel_weight_lookup, mesh_weight_lookup)
+                    detailed_sections_data.append(section_data)
+
+            # Steel Weight por Sección
+            st.markdown("### :material/inventory_2: Steel Weight per Section")
+            total_section_weight = 0
+            for i, section in enumerate(detailed_sections_data):
+                result = calculate_section_weight(
+                    section, wall_area, wall_thickness,
+                    apply_lap_splice, number_of_panels,
+                    opening_area, number_of_openings
+                )
+                section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"]
+                total_section_weight += section_weight
+                st.write(f":material/label: Section {i+1}: {section_weight:.2f} kg")
+
+            # Reo Rate total
+            reo_rate_kg_total = (reo_rate * (wall_thickness / 1000)) * wall_area if reo_rate > 0 else 0
+            if reo_rate_kg_total > 0:
+                st.write(f":material/add: Reo Rate: {reo_rate_kg_total:.2f} kg")
+
+            # Refuerzo adicional
+            if extra_steel_kg > 0:
+                st.write(f":material/add: Additional Steel: {extra_steel_kg:.2f} kg")
+
+            # 🔸 Total general (PREVIA, sin waste — el waste % se define más abajo,
+            # en "Waste Factors", así que todavía no se puede aplicar aquí).
+            # ✅ CORREGIDO (Bug 3): antes esta variable se llamaba "total_steel_weight",
+            # el mismo nombre que se reasignaba más abajo con el waste ya aplicado.
+            # El número que se mostraba aquí en pantalla NO incluía waste, pero el
+            # usuario no tenía forma de saberlo porque el rótulo no lo aclaraba y el
+            # nombre de la variable era idéntico al del total "real". Se renombra para
+            # que sea imposible confundirlos, y se aclara en el texto.
+            total_steel_weight_preview = total_section_weight + reo_rate_kg_total + extra_steel_kg
+            st.markdown(f"""
+            <div class="pw-metric-row">
+                <div class="pw-metric">
+                    <div class="pw-metric-icon"><span class="pw-icon">hardware</span></div>
+                    <p class="pw-metric-label">Total steel (before waste %)</p>
+                    <p class="pw-metric-value">{total_steel_weight_preview:.2f} kg</p>
+                </div>
+                <div class="pw-metric">
+                    <div class="pw-metric-icon"><span class="pw-icon">grid_view</span></div>
+                    <p class="pw-metric-label">Steel from sections only</p>
+                    <p class="pw-metric-value">{total_section_weight:.2f} kg</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Dowels (SEPARADO)
+        with st.expander("Dowels", icon=":material/link:"):
+            dowels = st.radio("Dowels", ["No", "Yes"])
+            total_dowel_weight = 0  # 🔹 Inicialización
+
+            if dowels == "Yes":
+                dowel_calculation_method = st.radio("Dowel Weight Calculation", ["Calculate Automatically", "Enter Manually"])
+
+                if dowel_calculation_method == "Enter Manually":
+                    total_dowel_weight = st.number_input("Total Dowels Weight (kg)", min_value=0.0, value=0.0)
+
+                else:  # 🔹 Cálculo Automático
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        dowel_bar_type = st.selectbox("Dowel Bar Type", [""] + list(steel_weight_lookup.keys()))
+                    with col2:
+                        dowel_spacing = st.number_input("Dowel Spacing (mm)", min_value=0, step=10, value=0)
+
+                    # 🔹 Opción para ingresar la longitud manualmente o calcularla
+                    use_manual_length = st.checkbox("Enter Dowel Length Manually?")
+
+                    if use_manual_length:
+                        dowel_length = float_input("Dowel Length (m)", key="dowel_len_manual_text", default=0.0, decimals=4, min_value=0.0)
+                    elif dowel_bar_type:
+                        dowel_length = (40 * bar_diameter_lookup[dowel_bar_type] * 2) / 1000 + 0.02
+                    else:
+                        dowel_length = 0.0
+                        st.warning("Please select a valid Dowel Bar Type to calculate length.", icon=":material/warning:")
+
+                    # 🔹 Ancho promedio del panel (respetando límite de 4.2 m)
+                    if number_of_panels > 0:
+                        avg_panel_width = min(4.2, wall_area / number_of_panels)
+                    else:
+                        avg_panel_width = 0
+                        st.warning("Please enter number of panels greater than zero to calculate dowel bars.", icon=":material/warning:")
+
+                    # 🔹 Número de dowels por panel
+                    if dowel_spacing > 0 and dowel_bar_type:
+                        dowels_per_panel = avg_panel_width / (dowel_spacing / 1000)
+                        dowels_per_panel = int(dowels_per_panel) + (1 if dowels_per_panel % 1 > 0 else 0)
+                        total_dowels = dowels_per_panel * number_of_panels
+                        total_dowel_weight = total_dowels * dowel_length * steel_weight_lookup[dowel_bar_type]
+                    else:
+                        total_dowel_weight = 0
+                        if dowel_spacing > 0 and not dowel_bar_type:
+                            st.warning("Please select a Dowel Bar Type to calculate dowels.", icon=":material/warning:")
+                        elif dowel_spacing <= 0:
+                            st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.", icon=":material/warning:")
+
+    with sub_costs:
+        # Additional Elements (SEPARADO)
+        with st.expander("Additional Elements", icon=":material/build:", expanded=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                ripbox = st.number_input("Ripbox (m)", value=0.0)
+            with col2:
+                ferrules = st.number_input("Ferrules (units)", value=0)
+            with col3:
+                Threadbar = st.number_input("Threadbar (units)", value=0)
+            col4, col5, col6 = st.columns(3)
+            with col4:
+                couplers = st.number_input("Couplers (units)", value=0)
+            with col5:
+                lifters_per_panel = st.number_input("Lifters per Panel", value=0)
+            with col6:
+                special_accessories_per_m2 = st.number_input("Special Accessories per m²", min_value=0.0, value=0.0, step=0.1)
+
+            st.markdown("### :material/add_circle: Add Custom Additional Elements")
+            num_custom_elements = st.number_input("How many additional elements do you want to add?", min_value=0, max_value=10, value=0)
+
+            additional_custom_elements = {}
+            custom_additional_info = {}
 
 
-        wall_thickness = st.number_input(
-            "Wall Thickness (mm)",
-            min_value=0,
-            value=0,
-            step=10,
-            key="wall_thickness_input",
-        )
-
-        concrete_type = st.selectbox(
-            "Concrete Type",
-            concrete_options,
-            index=0,
-            key="concrete_type_select",
-        )
+            for i in range(num_custom_elements):
+                with st.container():
+                    col1, col2, col3 = st.columns([3, 1, 1])
+                    item_label = col1.text_input(f"Description {i+1}", key=f"add_item_label_{i}")
+                    item_unit = col2.selectbox("Unit", ["$/panel", "$/m²", "$/unit"], key=f"add_item_unit_{i}")
+                    item_value = col3.number_input("Cost", min_value=0.0, step=0.1, key=f"add_item_value_{i}")
+                    custom_additional_info[item_label.strip()] = {"unit": item_unit, "cost": item_value}
 
 
-    with st.expander("Openings", icon=":material/window:"):
-        has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
-        if has_openings == "Yes":
-            opening_area = float_input("Total Openings Area (m²)", key="opening_area_input_text", default=0.0, decimals=4, min_value=0.0)
-            number_of_openings = st.number_input("Number of Openings", min_value=0, value=0)
-        else:
-            opening_area = 0
-            number_of_openings = 0
+                item_qty = 1  # Valor por defecto
+                if item_unit == "$/unit":
+                    item_qty = st.number_input(f"Qty for '{item_label or f'Item {i+1}'}'", min_value=0, step=1, value=1, key=f"add_item_qty_{i}")
 
-    # Reinforcement
-    with st.expander("Reinforcement", icon=":material/construction:"):
-        reo_rate = st.number_input("Reo Rate (kg/m³) (optional)", min_value=0.0, value=0.0)
-        use_reo_rate_only = st.radio("Use only Reo Rate or add to bars/mesh?", ["Add to bars and mesh", "Use only Reo Rate"], index=0, key="use_reo_option")
-        apply_lap_splice = st.checkbox("Apply Lap Splice (40d for bars, 20% for mesh)", value=True)
-        extra_steel_kg = st.number_input("Additional Steel Reinforcement (kg)", min_value=0.0, step=1.0, key="extra_steel_input_main")
+                if item_label.strip():
+                    if item_unit == "$/panel" and number_of_panels > 0:
+                        additional_custom_elements[item_label.strip()] = safe_div((item_value * number_of_panels), wall_area)
 
-    with st.expander("Reinforcement — Detailed Sections (Bars & Mesh)", icon=":material/view_agenda:"):
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("Add Bars and Mesh Section", icon=":material/add:"):
-                st.session_state.num_detail_sections += 1
-        with col2:
-            if st.button("Remove Last Section", icon=":material/remove:") and st.session_state.num_detail_sections > 1:
-                st.session_state.num_detail_sections -= 1
+                    elif item_unit == "$/m²":
+                        additional_custom_elements[item_label.strip()] = item_value
+                    elif item_unit == "$/unit":
+                        additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
 
-        detailed_sections_data = []
-        for i in range(st.session_state.num_detail_sections):
-            with st.container(border=True):
-                st.markdown(f"### :material/hub: Bars and Mesh Section {i + 1}")
-                section_data = detailed_reinforcement_section(i, steel_weight_lookup, mesh_weight_lookup)
-                detailed_sections_data.append(section_data)
-
-    
-
-        # Steel Weight por Sección
-        st.markdown("### :material/inventory_2: Steel Weight per Section")
-        total_section_weight = 0
-        for i, section in enumerate(detailed_sections_data):
+        # 🔁 Cálculo acumulado desde secciones dinámicas (se necesita ya acá para
+        # que el filtro de Waste Factors sepa qué elementos están realmente en uso)
+        bars_weight_total = 0
+        mesh_weight_total = 0
+        trimer_bar_total = 0
+        for section in detailed_sections_data:
             result = calculate_section_weight(
                 section, wall_area, wall_thickness,
                 apply_lap_splice, number_of_panels,
                 opening_area, number_of_openings
             )
-            section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"]
-            total_section_weight += section_weight
-            st.write(f":material/label: Section {i+1}: {section_weight:.2f} kg")
+            bars_weight_total += result["bars_total"]
+            mesh_weight_total += result["mesh_total"]
+            trimer_bar_total += result["trimer_total"]
 
-        # Reo Rate total
-        reo_rate_kg_total = (reo_rate * (wall_thickness / 1000)) * wall_area if reo_rate > 0 else 0
-        if reo_rate_kg_total > 0:
-            st.write(f":material/add: Reo Rate: {reo_rate_kg_total:.2f} kg")
+        concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
 
-        # Refuerzo adicional
-        if extra_steel_kg > 0:
-            st.write(f":material/add: Additional Steel: {extra_steel_kg:.2f} kg")
+        # Waste % por elemento — solo se muestra el % de waste para elementos
+        # que realmente están en uso (filtro por cantidad > 0).
+        with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
+            st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
 
-        # 🔸 Total general (PREVIA, sin waste — el waste % se define más abajo,
-        # en "Waste Factors", así que todavía no se puede aplicar aquí).
-        # ✅ CORREGIDO (Bug 3): antes esta variable se llamaba "total_steel_weight",
-        # el mismo nombre que se reasignaba más abajo con el waste ya aplicado.
-        # El número que se mostraba aquí en pantalla NO incluía waste, pero el
-        # usuario no tenía forma de saberlo porque el rótulo no lo aclaraba y el
-        # nombre de la variable era idéntico al del total "real". Se renombra para
-        # que sea imposible confundirlos, y se aclara en el texto.
-        total_steel_weight_preview = total_section_weight + reo_rate_kg_total + extra_steel_kg
-        st.markdown(f"""
-        <div class="pw-metric-row">
-            <div class="pw-metric">
-                <div class="pw-metric-icon"><span class="pw-icon">hardware</span></div>
-                <p class="pw-metric-label">Total steel (before waste %)</p>
-                <p class="pw-metric-value">{total_steel_weight_preview:.2f} kg</p>
-            </div>
-            <div class="pw-metric">
-                <div class="pw-metric-icon"><span class="pw-icon">grid_view</span></div>
-                <p class="pw-metric-label">Steel from sections only</p>
-                <p class="pw-metric-value">{total_section_weight:.2f} kg</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            waste_items = {
+                "Concrete": concrete_volume,
+                "Steel Bars (H+V)": bars_weight_total,
+                "Trimer Bar": trimer_bar_total,
+                "Mesh": mesh_weight_total,
+                "Ripbox": ripbox
+            }
 
-    # Dowels (SEPARADO)
-    with st.expander("Dowels", icon=":material/link:"):
-        dowels = st.radio("Dowels", ["No", "Yes"])
-        total_dowel_weight = 0  # 🔹 Inicialización
+            waste_percentages = {}
+            for label, qty in waste_items.items():
+                if qty > 0:  # solo mostrar si tiene cantidad
+                    waste_percentages[label] = st.number_input(
+                        f"Waste % for {label}",
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.1,
+                        key=f"waste_{label.replace(' ', '_')}"
+                    )
 
-        if dowels == "Yes":
-            dowel_calculation_method = st.radio("Dowel Weight Calculation", ["Calculate Automatically", "Enter Manually"])
+            waste_concrete = waste_percentages.get("Concrete", 0.0)
+            waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
+            waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
+            waste_mesh = waste_percentages.get("Mesh", 0.0)
+            waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
-            if dowel_calculation_method == "Enter Manually":
-                total_dowel_weight = st.number_input("Total Dowels Weight (kg)", min_value=0.0, value=0.0)
+        with st.expander("EO Items (Optional)", icon=":material/add_circle:", expanded=False):
+            num_eo = st.number_input("How many EO Items (Optional) do you want to add?", min_value=0, max_value=10, step=1, value=0)
 
-            else:  # 🔹 Cálculo Automático
-                dowel_bar_type = st.selectbox("Dowel Bar Type", [""] + list(steel_weight_lookup.keys()))
-                dowel_spacing = st.number_input("Dowel Spacing (mm)", min_value=0, step=10, value=0)
+            eo_costs = {}
 
-                # 🔹 Opción para ingresar la longitud manualmente o calcularla
-                use_manual_length = st.checkbox("Enter Dowel Length Manually?")
-            
-                if use_manual_length:
-                    dowel_length = float_input("Dowel Length (m)", key="dowel_len_manual_text", default=0.0, decimals=4, min_value=0.0)
-                elif dowel_bar_type:
-                    dowel_length = (40 * bar_diameter_lookup[dowel_bar_type] * 2) / 1000 + 0.02
-                else:
-                    dowel_length = 0.0
-                    st.warning("Please select a valid Dowel Bar Type to calculate length.", icon=":material/warning:")
+            for i in range(num_eo):
+                with st.container():
+                    col1, col2, col3 = st.columns([3, 1, 1])
+                    eo_label = col1.text_input(f"EO Desc {i+1}", key=f"eo_label_{i}", value=f"EO - Extra {i+1}")
+                    eo_unit = col2.selectbox("Unit", ["$/panel", "$/m²"], key=f"eo_unit_{i}")
+                    eo_value = col3.number_input("Value", min_value=0.0, step=1.0, key=f"eo_value_{i}")
 
+                    if eo_label.strip():
+                        if eo_unit == "$/panel" and number_of_panels > 0:
+                            eo_costs[eo_label.strip()] = safe_div((eo_value * number_of_panels), wall_area)
 
-                # 🔹 Ancho promedio del panel (respetando límite de 4.2 m)
-                if number_of_panels > 0:
-                    avg_panel_width = min(4.2, wall_area / number_of_panels)
-                else:
-                    avg_panel_width = 0
-                    st.warning("Please enter number of panels greater than zero to calculate dowel bars.", icon=":material/warning:")
-
-
-                # 🔹 Número de dowels por panel
-                if dowel_spacing > 0 and dowel_bar_type:
-                    dowels_per_panel = avg_panel_width / (dowel_spacing / 1000)
-                    dowels_per_panel = int(dowels_per_panel) + (1 if dowels_per_panel % 1 > 0 else 0)
-                    total_dowels = dowels_per_panel * number_of_panels
-                    total_dowel_weight = total_dowels * dowel_length * steel_weight_lookup[dowel_bar_type]
-                else:
-                    total_dowel_weight = 0
-                    if dowel_spacing > 0 and not dowel_bar_type:
-                        st.warning("Please select a Dowel Bar Type to calculate dowels.", icon=":material/warning:")
-                    elif dowel_spacing <= 0:
-                        st.warning("Please enter a valid Dowel Spacing greater than zero to calculate dowels.", icon=":material/warning:")
-
-
-
-    # Additional Elements (SEPARADO)
-    with st.expander("Additional Elements", icon=":material/build:"):
-        ripbox = st.number_input("Ripbox (m)", value=0.0)
-        ferrules = st.number_input("Ferrules (units)", value=0)
-        Threadbar = st.number_input("Threadbar (units)", value=0)
-        couplers = st.number_input("Couplers (units)", value=0)
-        lifters_per_panel = st.number_input("Lifters per Panel", value=0)
-        special_accessories_per_m2 = st.number_input("Special Accessories per m²", min_value=0.0, value=0.0, step=0.1)
-
-        st.markdown("### :material/add_circle: Add Custom Additional Elements")
-        num_custom_elements = st.number_input("How many additional elements do you want to add?", min_value=0, max_value=10, value=0)
-
-        additional_custom_elements = {}
-        custom_additional_info = {}
-
-
-        for i in range(num_custom_elements):
-            with st.container():
-                col1, col2, col3 = st.columns([3, 1, 1])
-                item_label = col1.text_input(f"Description {i+1}", key=f"add_item_label_{i}")
-                item_unit = col2.selectbox("Unit", ["$/panel", "$/m²", "$/unit"], key=f"add_item_unit_{i}")
-                item_value = col3.number_input("Cost", min_value=0.0, step=0.1, key=f"add_item_value_{i}")
-                custom_additional_info[item_label.strip()] = {"unit": item_unit, "cost": item_value}
-
-
-            item_qty = 1  # Valor por defecto
-            if item_unit == "$/unit":
-                item_qty = st.number_input(f"Qty for '{item_label or f'Item {i+1}'}'", min_value=0, step=1, value=1, key=f"add_item_qty_{i}")
-
-            if item_label.strip():
-                if item_unit == "$/panel" and number_of_panels > 0:
-                    additional_custom_elements[item_label.strip()] = safe_div((item_value * number_of_panels), wall_area)
-
-                elif item_unit == "$/m²":
-                    additional_custom_elements[item_label.strip()] = item_value
-                elif item_unit == "$/unit":
-                    additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
-
-    # 🔁 Cálculo acumulado desde secciones dinámicas (se necesita ya acá para
-    # que el filtro de Waste Factors sepa qué elementos están realmente en uso)
-    bars_weight_total = 0
-    mesh_weight_total = 0
-    trimer_bar_total = 0
-    for section in detailed_sections_data:
-        result = calculate_section_weight(
-            section, wall_area, wall_thickness,
-            apply_lap_splice, number_of_panels,
-            opening_area, number_of_openings
-        )
-        bars_weight_total += result["bars_total"]
-        mesh_weight_total += result["mesh_total"]
-        trimer_bar_total += result["trimer_total"]
-
-    concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
-
-    # Waste % por elemento — reubicado después de Additional Elements (donde ya
-    # se conoce Ripbox) para poder seguir filtrando: solo se muestra el % de
-    # waste para elementos que realmente están en uso (igual que antes),
-    # pero ahora bastante antes de EO Items en vez de al final del formulario.
-    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
-        st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
-
-        waste_items = {
-            "Concrete": concrete_volume,
-            "Steel Bars (H+V)": bars_weight_total,
-            "Trimer Bar": trimer_bar_total,
-            "Mesh": mesh_weight_total,
-            "Ripbox": ripbox
-        }
-
-        waste_percentages = {}
-        for label, qty in waste_items.items():
-            if qty > 0:  # solo mostrar si tiene cantidad
-                waste_percentages[label] = st.number_input(
-                    f"Waste % for {label}",
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.1,
-                    key=f"waste_{label.replace(' ', '_')}"
-                )
-
-        waste_concrete = waste_percentages.get("Concrete", 0.0)
-        waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
-        waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
-        waste_mesh = waste_percentages.get("Mesh", 0.0)
-        waste_ripbox = waste_percentages.get("Ripbox", 0.0)
-
-    with st.expander("EO Items (Optional)", icon=":material/add_circle:", expanded=False):
-        num_eo = st.number_input("How many EO Items (Optional) do you want to add?", min_value=0, max_value=10, step=1, value=0)
-    
-        eo_costs = {}
-
-        for i in range(num_eo):
-            with st.container():
-                col1, col2, col3 = st.columns([3, 1, 1])
-                eo_label = col1.text_input(f"EO Desc {i+1}", key=f"eo_label_{i}", value=f"EO - Extra {i+1}")
-                eo_unit = col2.selectbox("Unit", ["$/panel", "$/m²"], key=f"eo_unit_{i}")
-                eo_value = col3.number_input("Value", min_value=0.0, step=1.0, key=f"eo_value_{i}")
-
-                if eo_label.strip():
-                    if eo_unit == "$/panel" and number_of_panels > 0:
-                        eo_costs[eo_label.strip()] = safe_div((eo_value * number_of_panels), wall_area)
-
-                    elif eo_unit == "$/m²":
-                        eo_costs[eo_label.strip()] = eo_value
+                        elif eo_unit == "$/m²":
+                            eo_costs[eo_label.strip()] = eo_value
 
 
 
