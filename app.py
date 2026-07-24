@@ -1455,8 +1455,13 @@ with tab_muros:
 
 
     if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
-        # Mostrar resultados
-        show_results = st.toggle(":material/bar_chart: Show Results", value=False)
+        # Mostrar resultados — el interruptor vive en la barra lateral (junto a
+        # Cost Settings), pero acá dejamos un aviso visible para que no quede
+        # escondido si alguien no se da cuenta de que existe.
+        st.info("Los resultados y el desglose de costos se activan desde la barra lateral izquierda.", icon=":material/arrow_back:")
+        st.sidebar.markdown("---")
+        st.sidebar.caption("View options")
+        show_results = st.sidebar.toggle(":material/bar_chart: Show Results", value=False)
 
         if show_results:
             st.markdown("## 📊 Results")
@@ -1556,7 +1561,7 @@ with tab_muros:
                 st.markdown("</ul></div>", unsafe_allow_html=True)
 
 
-        if st.toggle(":material/payments: Show Cost Breakdown", value=False):
+        if st.sidebar.toggle(":material/payments: Show Cost Breakdown", value=False):
             st.markdown("### :material/payments: Cost Breakdown (per m²)")
             st.dataframe(
                 df_costs,
