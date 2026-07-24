@@ -834,20 +834,6 @@ with tab_muros:
         </div>
         """, unsafe_allow_html=True)
 
-    # Waste % por elemento — reubicado justo después de Reinforcement porque
-    # afecta concreto y acero/malla, secciones que ya quedaron definidas acá
-    # (antes aparecía al final del formulario, después de secciones que ya
-    # no se podían editar con el % de desperdicio en mente).
-    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
-        st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
-        waste_concrete = st.number_input("Waste % for Concrete", min_value=0.0, value=0.0, step=0.1, key="waste_Concrete")
-        waste_steel = st.number_input("Waste % for Steel Bars (H+V)", min_value=0.0, value=0.0, step=0.1, key="waste_Steel_Bars_(H+V)")
-        waste_trimmer = st.number_input("Waste % for Trimer Bar", min_value=0.0, value=0.0, step=0.1, key="waste_Trimer_Bar")
-        waste_mesh = st.number_input("Waste % for Mesh", min_value=0.0, value=0.0, step=0.1, key="waste_Mesh")
-        waste_ripbox = st.number_input("Waste % for Ripbox", min_value=0.0, value=0.0, step=0.1, key="waste_Ripbox")
-
-
-
     # Dowels (SEPARADO)
     with st.expander("Dowels", icon=":material/link:"):
         dowels = st.radio("Dowels", ["No", "Yes"])
@@ -936,6 +922,54 @@ with tab_muros:
                 elif item_unit == "$/unit":
                     additional_custom_elements[item_label.strip()] = (item_value * item_qty) / wall_area if wall_area > 0 else 0
 
+    # 🔁 Cálculo acumulado desde secciones dinámicas (se necesita ya acá para
+    # que el filtro de Waste Factors sepa qué elementos están realmente en uso)
+    bars_weight_total = 0
+    mesh_weight_total = 0
+    trimer_bar_total = 0
+    for section in detailed_sections_data:
+        result = calculate_section_weight(
+            section, wall_area, wall_thickness,
+            apply_lap_splice, number_of_panels,
+            opening_area, number_of_openings
+        )
+        bars_weight_total += result["bars_total"]
+        mesh_weight_total += result["mesh_total"]
+        trimer_bar_total += result["trimer_total"]
+
+    concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
+
+    # Waste % por elemento — reubicado después de Additional Elements (donde ya
+    # se conoce Ripbox) para poder seguir filtrando: solo se muestra el % de
+    # waste para elementos que realmente están en uso (igual que antes),
+    # pero ahora bastante antes de EO Items en vez de al final del formulario.
+    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
+        st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
+
+        waste_items = {
+            "Concrete": concrete_volume,
+            "Steel Bars (H+V)": bars_weight_total,
+            "Trimer Bar": trimer_bar_total,
+            "Mesh": mesh_weight_total,
+            "Ripbox": ripbox
+        }
+
+        waste_percentages = {}
+        for label, qty in waste_items.items():
+            if qty > 0:  # solo mostrar si tiene cantidad
+                waste_percentages[label] = st.number_input(
+                    f"Waste % for {label}",
+                    min_value=0.0,
+                    value=0.0,
+                    step=0.1,
+                    key=f"waste_{label.replace(' ', '_')}"
+                )
+
+        waste_concrete = waste_percentages.get("Concrete", 0.0)
+        waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
+        waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
+        waste_mesh = waste_percentages.get("Mesh", 0.0)
+        waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
     with st.expander("EO Items (Optional)", icon=":material/add_circle:", expanded=False):
         num_eo = st.number_input("How many EO Items (Optional) do you want to add?", min_value=0, max_value=10, step=1, value=0)
@@ -958,22 +992,9 @@ with tab_muros:
 
 
 
-    # 🔹 Cálculo Correcto del Steel Reinforcement (todos los componentes explícitos)
-
-    # 🔁 Cálculo acumulado desde secciones dinámicas
-    bars_weight_total = 0
-    mesh_weight_total = 0
-    trimer_bar_total = 0
-
-    for section in detailed_sections_data:
-        result = calculate_section_weight(
-            section, wall_area, wall_thickness,
-            apply_lap_splice, number_of_panels,
-            opening_area, number_of_openings
-        )
-        bars_weight_total += result["bars_total"]
-        mesh_weight_total += result["mesh_total"]
-        trimer_bar_total += result["trimer_total"]
+    # (bars_weight_total, mesh_weight_total, trimer_bar_total y concrete_volume
+    # ya se calcularon más arriba, justo después de Additional Elements, para
+    # que Waste Factors pudiera filtrar qué elementos están en uso)
 
     # 🔹 Calcular peso por m²
     bars_weight_m2 = bars_weight_total / wall_area if wall_area > 0 else 0
@@ -982,13 +1003,9 @@ with tab_muros:
 
     additional_reinforcement_kg_total = extra_steel_kg
 
-
-    # 📌 Cálculo del volumen de concreto
-    concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
-
     # Nota: los % de waste (waste_concrete, waste_steel, waste_trimmer, waste_mesh,
     # waste_ripbox) ya se capturaron más arriba, en el expander "Waste Factors"
-    # reubicado justo después de Reinforcement.
+    # (ubicado después de Additional Elements, antes de EO Items).
     total_steel_weight = (
         reo_rate_kg_total * (1 + waste_steel / 100) +
         bars_weight_total * (1 + waste_steel / 100) +
