@@ -748,8 +748,9 @@ if st.session_state.estimate_type == "Columns":
 
 
 def render_walls_tab():
-    # 📌 Código del proyecto ingresado por el usuario
-    project_code = st.text_input("Enter Project Code", placeholder="e.g. A4980 - Beard")
+    # 📌 Código del proyecto — tomado de la pantalla de menú, ya no se vuelve a pedir
+    project_code = st.session_state.get("project_code_menu", "")
+    st.caption(f"Project Code: **{project_code or 'N/A'}**")
 
     # 📌 Código del proyecto ingresado por el usuario
     element_type = st.text_input("Enter Element Type", placeholder="e.g. PT1")
