@@ -3,7 +3,6 @@ columns_tab.py
 ================
 Standalone Columns cost-estimation module for the Precast Wall Estimator app.
 
-
 This file is kept completely separate from app.py on purpose, so the
 already-validated Walls calculation logic is never touched. app.py only
 needs two small additions — nothing inside app.py's existing Walls code
@@ -145,7 +144,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             if col_volume_per_column > 0:
                 st.markdown(
                     f'<div class="pw-metric-row"><div class="pw-metric">'
-                    f'<div class="pw-metric-icon"><span class="pw-icon">square_foot</span></div>'
+                    f'<div class="pw-metric-icon"><span class="pw-icon">foundation</span></div>'
                     f'<p class="pw-metric-label">Volume per column</p>'
                     f'<p class="pw-metric-value">{col_volume_per_column:.3f} m³</p>'
                     f'</div></div>',
@@ -156,62 +155,78 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     # REINFORCEMENT
     # ------------------------------------------------------------------ #
     with col_sub_reo:
-        with st.expander("Longitudinal Reinforcement", icon=":material/construction:", expanded=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                col_long_qty = st.number_input("Number of Longitudinal Bars", min_value=0, value=0, step=1, key="col_long_qty")
-            with c2:
-                col_long_bar = st.selectbox("Longitudinal Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_long_bar")
-
-            st.caption("Optional second longitudinal bar group — leave the bar type blank if all longitudinal bars are the same diameter.")
-            c3, c4 = st.columns(2)
-            with c3:
-                col_long_qty2 = st.number_input("Number of Longitudinal Bars (Group 2)", min_value=0, value=0, step=1, key="col_long_qty2")
-            with c4:
-                col_long_bar2 = st.selectbox("Longitudinal Bar Type (Group 2)", [""] + list(steel_weight_lookup.keys()), key="col_long_bar2")
-
-            col_apply_lap = st.checkbox("Apply Lap Splice (40 x bar diameter)", value=True, key="col_apply_lap")
-
-        with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/grid_4x4:", expanded=True):
-            st.markdown("###### Closed Ties")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                col_tie_bar = st.selectbox("Tie Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_tie_bar")
-            with c2:
-                col_tie_spacing_mm = st.number_input("Tie Spacing (mm)", min_value=0, value=0, step=10, key="col_tie_spacing_mm")
-            with c3:
-                col_tie_perimeter_override_mm = st.number_input(
-                    "Measured Tie Perimeter (mm)", min_value=0, value=0, step=1, key="col_tie_perim_mm"
-                )
-            st.caption(
-                "Leave the measured perimeter at 0 to calculate it from Width, Depth and Cover. "
-                "Enter it only if a detailed cross-section is available and a single tie's real "
-                "perimeter (including hooks/crossties) can be measured directly."
-            )
-            col_tie_perimeter_override = col_tie_perimeter_override_mm / 1000
-
-            st.markdown("###### Ligs")
-            c4, c5 = st.columns(2)
-            with c4:
-                col_lig_qty = st.number_input("Number of Ligs per Tie Level", min_value=0, value=0, step=1, key="col_lig_qty")
-            with c5:
-                col_lig_bar = st.selectbox("Lig Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_lig_bar")
-
-        with st.expander("Steel Costing Method", icon=":material/calculate:", expanded=True):
+        with st.expander("Steel Costing Method", icon=":material/settings:", expanded=True):
             col_steel_mode = st.radio(
                 "How should reinforcing steel be costed?",
-                ["Bar Detail (calculated above)", "General Reo Rate (kg/m³)"],
+                ["Bar Detail (configure below)", "General Reo Rate (kg/m³)"],
                 index=0,
                 key="col_steel_mode",
                 help=(
-                    "Bar Detail costs steel using the bars/ties entered above. "
-                    "General Reo Rate costs directly from a single kg/m³ figure off the "
-                    "drawing, for when the detailed reinforcement breakdown isn't available."
+                    "Bar Detail costs steel using the longitudinal/tie/lig bars configured "
+                    "below. General Reo Rate costs directly from a single kg/m³ figure off "
+                    "the drawing, for when the detailed reinforcement breakdown isn't "
+                    "available — in that case the bar configuration below is skipped "
+                    "entirely and only Dowels still needs setting up."
                 ),
             )
-            col_reo_rate_given = st.number_input(
-                "Reo Rate Given (kg/m³) — from drawing", min_value=0.0, value=0.0, key="col_reo_rate_given"
-            )
+            if col_steel_mode == "General Reo Rate (kg/m³)":
+                col_reo_rate_given = st.number_input(
+                    "Reo Rate Given (kg/m³) — from drawing", min_value=0.0, value=0.0, key="col_reo_rate_given"
+                )
+            else:
+                col_reo_rate_given = 0.0
+                st.caption("Configure the longitudinal, tie and lig reinforcement below — the steel rate will be calculated from it.")
+
+        if col_steel_mode == "Bar Detail (configure below)":
+            with st.expander("Longitudinal Reinforcement", icon=":material/construction:", expanded=True):
+                c1, c2 = st.columns(2)
+                with c1:
+                    col_long_qty = st.number_input("Number of Longitudinal Bars", min_value=0, value=0, step=1, key="col_long_qty")
+                with c2:
+                    col_long_bar = st.selectbox("Longitudinal Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_long_bar")
+
+                st.caption("Optional second longitudinal bar group — leave the bar type blank if all longitudinal bars are the same diameter.")
+                c3, c4 = st.columns(2)
+                with c3:
+                    col_long_qty2 = st.number_input("Number of Longitudinal Bars (Group 2)", min_value=0, value=0, step=1, key="col_long_qty2")
+                with c4:
+                    col_long_bar2 = st.selectbox("Longitudinal Bar Type (Group 2)", [""] + list(steel_weight_lookup.keys()), key="col_long_bar2")
+
+                col_apply_lap = st.checkbox("Apply Lap Splice (40 x bar diameter)", value=True, key="col_apply_lap")
+
+            with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/window:", expanded=True):
+                st.markdown("###### Closed Ties")
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    col_tie_bar = st.selectbox("Tie Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_tie_bar")
+                with c2:
+                    col_tie_spacing_mm = st.number_input("Tie Spacing (mm)", min_value=0, value=0, step=10, key="col_tie_spacing_mm")
+                with c3:
+                    col_tie_perimeter_override_mm = st.number_input(
+                        "Measured Tie Perimeter (mm)", min_value=0, value=0, step=1, key="col_tie_perim_mm"
+                    )
+                st.caption(
+                    "Leave the measured perimeter at 0 to calculate it from Width, Depth and Cover. "
+                    "Enter it only if a detailed cross-section is available and a single tie's real "
+                    "perimeter (including hooks/crossties) can be measured directly."
+                )
+                col_tie_perimeter_override = col_tie_perimeter_override_mm / 1000
+
+                st.markdown("###### Ligs")
+                c4, c5 = st.columns(2)
+                with c4:
+                    col_lig_qty = st.number_input("Number of Ligs per Tie Level", min_value=0, value=0, step=1, key="col_lig_qty")
+                with c5:
+                    col_lig_bar = st.selectbox("Lig Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_lig_bar")
+        else:
+            # General Reo Rate mode — bar-level detail isn't needed for costing,
+            # so these stay at safe defaults (0 / blank) for the calculations below.
+            col_long_qty, col_long_bar = 0, ""
+            col_long_qty2, col_long_bar2 = 0, ""
+            col_apply_lap = True
+            col_tie_bar, col_tie_spacing_mm, col_tie_perimeter_override_mm = "", 0, 0
+            col_tie_perimeter_override = 0.0
+            col_lig_qty, col_lig_bar = 0, ""
 
         with st.expander("Dowels", icon=":material/link:", expanded=True):
             col_dowel_mode = st.radio(
@@ -221,8 +236,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 key="col_dowel_mode",
                 help=(
                     "Exclude — use only if the drawing confirms dowels don't apply. "
-                    "Estimate assumes one dowel per longitudinal bar, matching the Walls "
-                    "module's default. I know the details lets the real quantity be entered."
+                    "Estimate assumes one dowel per longitudinal bar (only available "
+                    "when Steel Costing Method is Bar Detail, since that's the only way "
+                    "the longitudinal bar count is known). "
+                    "I know the details lets the real quantity be entered."
                 ),
             )
             c1, c2 = st.columns(2)
@@ -276,7 +293,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_reo_weight_from_bars = col_long_weight_1 + col_long_weight_2 + col_tie_weight + col_lig_weight
     col_reo_rate_estimated = safe_div(col_reo_weight_from_bars, col_volume_per_column)
 
-    if col_steel_mode == "Bar Detail (calculated above)":
+    if col_steel_mode == "Bar Detail (configure below)":
         col_reo_rate_used = col_reo_rate_estimated
         col_reo_weight_used = col_reo_weight_from_bars
     else:
