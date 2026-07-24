@@ -255,13 +255,6 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             col_dowel_length_override = col_dowel_length_override_mm / 1000
             st.caption("Leave the length override at 0 to calculate it automatically as 2 x 40 x bar diameter + 20mm.")
 
-        with st.expander("Lifting & Accessories", icon=":material/build:", expanded=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                col_lifting_qty = st.number_input("Lifting Points per Column", min_value=0, value=0, step=1, key="col_lifting_qty")
-            with c2:
-                col_accessories_qty = st.number_input("Special Accessories per Column", min_value=0, value=0, step=1, key="col_accessories_qty")
-
     # ------------------------------------------------------------------ #
     # CALCULATIONS (bar weights, ties, dowels, reo rate)
     # ------------------------------------------------------------------ #
@@ -332,6 +325,13 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     # COSTS & EXTRAS
     # ------------------------------------------------------------------ #
     with col_sub_costs:
+        with st.expander("Lifting & Accessories", icon=":material/build:", expanded=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                col_lifting_qty = st.number_input("Lifting Points per Column", min_value=0, value=0, step=1, key="col_lifting_qty")
+            with c2:
+                col_accessories_qty = st.number_input("Special Accessories per Column", min_value=0, value=0, step=1, key="col_accessories_qty")
+
         with st.expander("Additional Consumables", icon=":material/inventory_2:", expanded=False):
             st.caption(
                 "Add any consumables shown on the structural drawing that aren't covered above "
