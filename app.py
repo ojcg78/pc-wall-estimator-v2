@@ -4,6 +4,11 @@ import pandas as pd
 import random as rand
 from columns_tab import render_columns_tab
 
+# Bump this string on every meaningful deploy — shown in the page footer so
+# it's obvious (without guessing) whether Streamlit Cloud is actually running
+# the latest code after a push, instead of a stale cached build.
+APP_BUILD_VERSION = "2026-07-24.1"
+
 st.set_page_config(page_title="Precast Elements Estimator", page_icon=":material/apartment:", initial_sidebar_state="collapsed")
 
 import streamlit as st
@@ -1647,3 +1652,10 @@ def render_walls_tab():
 
 if st.session_state.estimate_type == "Walls":
     render_walls_tab()
+
+st.markdown(
+    f"""<div style="text-align:center; color:var(--pw-text-muted, #999); font-size:12px; margin-top:2rem;">
+    Build: {APP_BUILD_VERSION}
+    </div>""",
+    unsafe_allow_html=True,
+)
