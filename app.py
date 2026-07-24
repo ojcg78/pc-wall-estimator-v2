@@ -554,8 +554,8 @@ st.markdown(f"""
     <div class="pw-header-left">
         <img src='data:image/png;base64,{logo_base64}' width='44' style='border-radius:10px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
         <div>
-            <p class="pw-header-title">Precast Wall Estimator</p>
-            <p class="pw-header-subtitle">Cost estimation for precast concrete elements</p>
+            <p class="pw-header-title">Precast Elements Estimator</p>
+            <p class="pw-header-subtitle">Cost estimation for precast concrete elements fabrication</p>
         </div>
     </div>
     <span class="pw-badge"><span class="pw-icon">check_circle</span> Active</span>
