@@ -66,7 +66,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     )
 
     col_project_code = st.session_state.get("project_code_menu", "")
-    st.caption(f"Project Code: **{col_project_code or 'N/A'}**")
+    col_project_name = st.session_state.get("project_name", "")
+    st.caption(f"Project: **{col_project_name or 'N/A'}** ({col_project_code or 'N/A'})")
     col_group_id = st.text_input("Enter Column Group ID", placeholder="e.g. PC-01", key="col_group_id")
 
     col_sub_geom, col_sub_reo, col_sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
@@ -437,7 +438,13 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                                  col_wages_cost * col_surface_area, col_shopdrawings_cost * col_surface_area,
                                  col_formwork_cost * col_surface_area, col_patching_cost * col_surface_area],
     })
-    col_df_costs.loc[len(col_df_costs.index)] = ["Total Cost", "", "", round(col_price_per_column, 2)]
+    # Same figures expressed per m³ too, so the report's main basis matches the
+    # app's headline metric ("Estimated fabrication cost per m³") line for line,
+    # not just in the total.
+    col_df_costs["Cost per m³ ($)"] = col_df_costs["Cost per Column ($)"] / col_volume_per_column if col_volume_per_column > 0 else 0
+    col_df_costs.loc[len(col_df_costs.index)] = [
+        "Total Cost", "", "", round(col_price_per_column, 2), round(col_price_per_m3, 2)
+    ]
 
     if col_volume_per_column > 0:
         st.info("Results and the cost breakdown are available in the sidebar on the left.", icon=":material/arrow_back:")
@@ -469,7 +476,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 col_df_costs,
                 hide_index=True,
                 use_container_width=True,
-                column_config={"Cost per Column ($)": st.column_config.NumberColumn(format="$%.2f")},
+                column_config={
+                    "Cost per Column ($)": st.column_config.NumberColumn(format="$%.2f"),
+                    "Cost per m³ ($)": st.column_config.NumberColumn(format="$%.2f"),
+                },
             )
 
         st.markdown(f"""
@@ -490,11 +500,11 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             workbook = writer.book
             col_df_costs.to_excel(writer, sheet_name="Report", startrow=6, index=False)
             worksheet = writer.sheets["Report"]
-            worksheet.write("A1", f"Project Code: {col_project_code}" if col_project_code else "Project Code: N/A")
+            worksheet.write("A1", f"Project: {col_project_name or 'N/A'} ({col_project_code or 'N/A'})")
             worksheet.write("A2", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A")
             worksheet.write("A3", f"Width x Depth: {col_width_mm} x {col_depth_mm} mm, Avg Height: {col_avg_height * 1000:.0f} mm")
             worksheet.write("A4", f"Concrete: {col_concrete_type}, Reo Rate Used: {col_reo_rate_used:.1f} kg/m3")
-            worksheet.write("A5", f"Price per Column: ${col_price_per_column:,.2f} | Price per m3: ${col_price_per_m3:,.2f}")
+            worksheet.write("A5", f"Estimated Fabrication Cost: ${col_price_per_m3:,.2f} / m³  (reference: ${col_price_per_column:,.2f} / column)")
             if col_total_group_cost > 0:
                 worksheet.write("A6", f"Estimated Total Group Cost: ${col_total_group_cost:,.2f}")
 
@@ -504,7 +514,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             total_format = workbook.add_format({"bold": True, "top": 1, "num_format": "$#,##0.00"})
 
             audit_sheet = workbook.add_worksheet("Audit")
-            audit_sheet.write("A1", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A", bold_format)
+            audit_sheet.write("A1", f"Project: {col_project_name or 'N/A'} ({col_project_code or 'N/A'})", bold_format)
+            audit_sheet.write("A2", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A", bold_format)
             audit_sheet.write("A3", "COLUMN INPUTS", bold_format)
             audit_rows = [
                 ("Width (mm)", col_width_mm), ("Depth (mm)", col_depth_mm),
@@ -523,8 +534,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 ("Dowels per Column (used)", col_dowel_qty_used),
                 ("Lifting Points per Column", col_lifting_qty),
                 ("Special Accessories per Column", col_accessories_qty),
-                ("Price per Column ($)", round(col_price_per_column, 2)),
-                ("Price per m3 ($)", round(col_price_per_m3, 2)),
+                ("Price per m3 ($) — PRIMARY", round(col_price_per_m3, 2)),
+                ("Price per Column ($) — reference", round(col_price_per_column, 2)),
                 ("Estimated Total Group Cost ($)", round(col_total_group_cost, 2) if col_total_group_cost > 0 else "n/a"),
             ]
             r = 4
