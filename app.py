@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import random as rand
 
-st.set_page_config(page_title="Precast Wall Estimator", page_icon=":material/apartment:", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Precast Wall Estimator", page_icon=":material/apartment:", initial_sidebar_state="collapsed")
 
 import streamlit as st
 
