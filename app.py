@@ -670,6 +670,10 @@ with tab_muros:
     # 📌 Código del proyecto ingresado por el usuario
     element_type = st.text_input("Enter Element Type", placeholder="e.g. PT1")
 
+    st.markdown("---")
+    st.markdown("##### :material/settings: Cost Settings")
+    st.caption("Unit prices used across all projects — not specific to this element.")
+
     # Editable Costs Table
     if st.checkbox("Show Editable Cost Table"):
         with st.expander("Editable Costs Table", icon=":material/receipt_long:", expanded=True):
@@ -766,8 +770,7 @@ with tab_muros:
         apply_lap_splice = st.checkbox("Apply Lap Splice (40d for bars, 20% for mesh)", value=True)
         extra_steel_kg = st.number_input("Additional Steel Reinforcement (kg)", min_value=0.0, step=1.0, key="extra_steel_input_main")
 
-        # Sub-secciones de refuerzo dentro del mismo expander
-        st.markdown("### :material/view_agenda: Bars and Mesh Sections")
+    with st.expander("Reinforcement — Detailed Sections (Bars & Mesh)", icon=":material/view_agenda:"):
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("Add Bars and Mesh Section", icon=":material/add:"):
@@ -830,6 +833,18 @@ with tab_muros:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+    # Waste % por elemento — reubicado justo después de Reinforcement porque
+    # afecta concreto y acero/malla, secciones que ya quedaron definidas acá
+    # (antes aparecía al final del formulario, después de secciones que ya
+    # no se podían editar con el % de desperdicio en mente).
+    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
+        st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
+        waste_concrete = st.number_input("Waste % for Concrete", min_value=0.0, value=0.0, step=0.1, key="waste_Concrete")
+        waste_steel = st.number_input("Waste % for Steel Bars (H+V)", min_value=0.0, value=0.0, step=0.1, key="waste_Steel_Bars_(H+V)")
+        waste_trimmer = st.number_input("Waste % for Trimer Bar", min_value=0.0, value=0.0, step=0.1, key="waste_Trimer_Bar")
+        waste_mesh = st.number_input("Waste % for Mesh", min_value=0.0, value=0.0, step=0.1, key="waste_Mesh")
+        waste_ripbox = st.number_input("Waste % for Ripbox", min_value=0.0, value=0.0, step=0.1, key="waste_Ripbox")
 
 
 
@@ -971,40 +986,9 @@ with tab_muros:
     # 📌 Cálculo del volumen de concreto
     concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
 
-        # 🔹 Waste % por elemento
-    with st.expander("Waste Factors (Optional)", icon=":material/recycling:"):
-        st.markdown("Enter a percentage of waste for each applicable item (leave at 0 if not needed):")
-
-        # Diccionario base con nombres legibles y claves técnicas
-        waste_items = {
-            "Concrete": concrete_volume,
-            "Steel Bars (H+V)": bars_weight_total,
-            "Trimer Bar": trimer_bar_total,
-            "Mesh": mesh_weight_total,
-            "Ripbox": ripbox
-        }
-
-        # Diccionarios para almacenar resultados
-        waste_percentages = {}
-
-        for label, qty in waste_items.items():
-            if qty > 0:  # solo mostrar si tiene cantidad
-                waste_percentages[label] = st.number_input(
-                    f"Waste % for {label}",
-                    min_value=0.0,
-                    value=0.0,
-                    step=0.1,
-                    key=f"waste_{label.replace(' ', '_')}"
-                )
-
-        # Asignar a las variables usadas en cálculos
-        waste_concrete = waste_percentages.get("Concrete", 0.0)
-        waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
-        waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
-        waste_mesh = waste_percentages.get("Mesh", 0.0)
-        waste_ripbox = waste_percentages.get("Ripbox", 0.0)
-
-        # 🔹 Cálculo explícito del peso total combinado (con waste)
+    # Nota: los % de waste (waste_concrete, waste_steel, waste_trimmer, waste_mesh,
+    # waste_ripbox) ya se capturaron más arriba, en el expander "Waste Factors"
+    # reubicado justo después de Reinforcement.
     total_steel_weight = (
         reo_rate_kg_total * (1 + waste_steel / 100) +
         bars_weight_total * (1 + waste_steel / 100) +
@@ -1440,18 +1424,6 @@ with tab_muros:
 
 
     if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
-        # ✅ CORREGIDO: el botón de descarga del Excel se generaba SIEMPRE, incluso
-        # antes de llenar área/espesor/paneles — alguien podía descargar y enviar
-        # un reporte con ceros sin darse cuenta. Ahora solo aparece aquí, dentro
-        # del bloque que ya valida que los datos del proyecto sean reales.
-        st.download_button(
-            label="Download Excel Report",
-            icon=":material/download:",
-            data=output.getvalue(),
-            file_name=f"{project_code}_{element_type}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
         # Mostrar resultados
         show_results = st.toggle(":material/bar_chart: Show Results", value=False)
 
@@ -1574,6 +1546,16 @@ with tab_muros:
                 <p class="pw-metric-value" style="font-size:32px;">${total_cost_per_m2:.2f}</p>
             </div>
         """, unsafe_allow_html=True)
+
+        # Descarga del reporte — último paso, una vez que ya se revisaron los
+        # resultados en pantalla (antes aparecía antes de verlos).
+        st.download_button(
+            label="Download Excel Report",
+            icon=":material/download:",
+            data=output.getvalue(),
+            file_name=f"{project_code}_{element_type}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     else:
             st.warning("Please enter wall area, thickness, and number of panels greater than zero to start calculations.", icon=":material/warning:")
