@@ -165,7 +165,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
 
             col_apply_lap = st.checkbox("Apply Lap Splice (40 x bar diameter)", value=True, key="col_apply_lap")
 
-        with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/grid:", expanded=True):
+        with st.expander("Transverse Reinforcement (Ties & Ligs)", icon=":material/construction:", expanded=True):
             st.markdown("###### Closed Ties")
             c1, c2, c3 = st.columns(3)
             with c1:
