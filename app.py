@@ -773,33 +773,7 @@ def render_walls_tab():
         unsafe_allow_html=True
     )
 
-    # Tab labels reflect completion state from the *previous* run's session_state
-    # (same approach as Columns: Streamlit fixes tab labels before this run's
-    # widgets are read, so a same-run checkmark isn't possible — but the prior
-    # state is a very close, practically-instant approximation once the user
-    # has interacted once).
-    _geom_done = (
-        st.session_state.get("num_panels_input", 0) > 0
-        and st.session_state.get("wall_area_input_text", "0") not in ("0", "0.0000", "", None)
-        and st.session_state.get("wall_thickness_input", 0) > 0
-    )
-    _reo_mode = st.session_state.get("use_reo_option", "Add to bars and mesh")
-    _reo_done = (
-        _reo_mode == "Use only Reo Rate" and st.session_state.get("reo_rate_input", 0) > 0
-    ) or (
-        _reo_mode == "Add to bars and mesh"
-        and (bool(st.session_state.get("hb_type_0")) or bool(st.session_state.get("vb_type_0")))
-    )
-    _costs_done = (
-        st.session_state.get("lifters_per_panel_input", 0) > 0
-        or st.session_state.get("special_accessories_input", 0) > 0
-    )
-
-    sub_geom, sub_reo, sub_costs = st.tabs([
-        f"{'✅ ' if _geom_done else ''}Geometry",
-        f"{'✅ ' if _reo_done else ''}Reinforcement",
-        f"{'✅ ' if _costs_done else ''}Costs & Extras",
-    ])
+    sub_geom, sub_reo, sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
 
     with sub_geom:
         # Panel Dimensions
@@ -1132,19 +1106,29 @@ def render_walls_tab():
 
         eo_summary = f"{num_eo} item(s)" if num_eo > 0 else "None"
 
+        _geom_done = number_of_panels > 0 and wall_area > 0 and wall_thickness > 0
+        _reo_done = (
+            (use_reo_rate_only == "Use only Reo Rate" and reo_rate > 0)
+            or (
+                use_reo_rate_only == "Add to bars and mesh"
+                and any(sec.get("horizontal_bar") or sec.get("vertical_bar") for sec in detailed_sections_data)
+            )
+        )
+        _costs_done = lifters_per_panel > 0 or special_accessories_per_m2 > 0
+
         st.sidebar.markdown("---")
         st.sidebar.markdown("##### :material/fact_check: Review Checklist")
-        st.sidebar.caption("Geometry")
+        st.sidebar.caption(f"{'✅ ' if _geom_done else ''}Geometry")
         st.sidebar.markdown(f"Panels: **{number_of_panels}** · Area: **{wall_area:.2f} m²** · Thickness: **{wall_thickness} mm**")
         st.sidebar.markdown(f"Concrete Type: **{concrete_type}**")
         st.sidebar.markdown(f"Openings: **{openings_summary}**")
-        st.sidebar.caption("Reinforcement")
+        st.sidebar.caption(f"{'✅ ' if _reo_done else ''}Reinforcement")
         st.sidebar.markdown(f"Bars/Mesh: **{reo_summary}**")
         if extra_steel_kg > 0:
             st.sidebar.markdown(f"Additional Steel: **{extra_steel_kg:.1f} kg**")
         st.sidebar.markdown(f"Lap Splice: **{'Applied' if apply_lap_splice else 'Not applied'}**")
         st.sidebar.markdown(f"Dowels: **{dowels_summary}**")
-        st.sidebar.caption("Costs & Extras")
+        st.sidebar.caption(f"{'✅ ' if _costs_done else ''}Costs & Extras")
         st.sidebar.markdown(f"Additional Elements: **{additional_summary}**")
         st.sidebar.markdown(f"Waste % applied to: **{waste_summary}**")
         st.sidebar.markdown(f"EO Items: **{eo_summary}**")
