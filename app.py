@@ -604,7 +604,7 @@ with menu_col2:
         st.rerun()
 
 # 🔧 Función para calcular barras horizontales y verticales
-def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v):
+def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v, apply_lap):
     spacing_h /= 1000 if spacing_h else 1  # Convertir a metros, evita división por 0
     spacing_v /= 1000 if spacing_v else 1
 
@@ -614,7 +614,7 @@ def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, p
 
     if bar_type_h:
         diameter_h = bar_diameter_lookup[bar_type_h]
-        lap_factor_h = 1 + (40 * diameter_h / 6000) if apply_lap_splice else 1
+        lap_factor_h = 1 + (40 * diameter_h / 6000) if apply_lap else 1
         factor_placement_h = 2 if placement_h == "EF" else 1
         bars_per_meter_h = 1 / spacing_v if spacing_v > 0 else 0  # Espaciamiento vertical
         total_length_per_m2_h = bars_per_meter_h * lap_factor_h * factor_placement_h
@@ -622,7 +622,7 @@ def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, p
 
     if bar_type_v:
         diameter_v = bar_diameter_lookup[bar_type_v]
-        lap_factor_v = 1 + (40 * diameter_v / 6000) if apply_lap_splice else 1
+        lap_factor_v = 1 + (40 * diameter_v / 6000) if apply_lap else 1
         factor_placement_v = 2 if placement_v == "EF" else 1
         bars_per_meter_v = 1 / spacing_h if spacing_h > 0 else 0  # Espaciamiento horizontal
         total_length_per_m2_v = bars_per_meter_v * lap_factor_v * factor_placement_v
@@ -687,7 +687,8 @@ def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panel
         section["horizontal_bar"],
         section["vertical_bar"],
         section["horizontal_placement"],
-        section["vertical_placement"]
+        section["vertical_placement"],
+        apply_lap
     )
 
     if section["mesh_reinforcement"] == "Yes":
