@@ -70,34 +70,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     st.caption(f"Project: **{col_project_name or 'N/A'}** ({col_project_code or 'N/A'})")
     col_group_id = st.text_input("Enter Column Group ID", placeholder="e.g. PC-01", key="col_group_id")
 
-    # Tab labels reflect completion state from the *previous* run's session_state
-    # (Streamlit fixes tab labels before this run's widgets are read, so a
-    # same-run checkmark isn't possible — but the prior state is a very close,
-    # practically-instant approximation once the user has interacted once).
-    _geom_done = (
-        st.session_state.get("col_width_mm", 0) > 0
-        and st.session_state.get("col_depth_mm", 0) > 0
-        and (
-            (st.session_state.get("col_group_vol_text", "0") not in ("0", "0.000", "", None)
-             and st.session_state.get("col_group_qty_a", 0) > 0)
-            or st.session_state.get("col_avg_height_mm", 0) > 0
-        )
-    )
-    _reo_done = (
-        st.session_state.get("col_steel_mode") == "General Reo Rate (kg/m³)"
-        and st.session_state.get("col_reo_rate_given", 0) > 0
-    ) or (
-        st.session_state.get("col_steel_mode") == "Bar Detail (configure below)"
-        and st.session_state.get("col_long_qty", 0) > 0
-        and bool(st.session_state.get("col_long_bar"))
-    )
-    _costs_done = st.session_state.get("col_lifting_qty", 0) > 0 or st.session_state.get("col_accessories_qty", 0) > 0
-
-    col_sub_geom, col_sub_reo, col_sub_costs = st.tabs([
-        f"{'✅ ' if _geom_done else ''}Geometry",
-        f"{'✅ ' if _reo_done else ''}Reinforcement",
-        f"{'✅ ' if _costs_done else ''}Costs & Extras",
-    ])
+    col_sub_geom, col_sub_reo, col_sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
 
     # ------------------------------------------------------------------ #
     # GEOMETRY
