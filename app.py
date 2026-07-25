@@ -288,7 +288,7 @@ div[data-testid="stExpander"] summary {
     transform: translateY(-1px);
 }
 .stDownloadButton > button {
-    background: linear-gradient(135deg, #E4CB86, var(--pw-teal-dark)) !important;
+    background: linear-gradient(135deg, #E4CB86, var(--pw-teal)) !important;
     color: var(--pw-ink) !important;
     border: none !important;
     border-radius: 10px !important;
@@ -312,8 +312,8 @@ div[data-testid="stExpander"] summary {
 }
 [data-testid="stSidebarCollapsedControl"] svg,
 [data-testid="stSidebarCollapseButton"] svg {
-    color: #FFFFFF !important;
-    fill: #FFFFFF !important;
+    color: var(--pw-ink) !important;
+    fill: var(--pw-ink) !important;
 }
 
 /* --- Pestañas de navegación --- */
@@ -322,10 +322,10 @@ button[data-baseweb="tab"] {
     font-size: 15px !important;
 }
 button[data-baseweb="tab"][aria-selected="true"] {
-    color: var(--pw-teal) !important;
+    color: var(--pw-teal-dark) !important;
 }
 div[data-baseweb="tab-highlight"] {
-    background-color: var(--pw-teal) !important;
+    background-color: var(--pw-teal-dark) !important;
 }
 
 /* --- Detalles heredados que siguen siendo útiles --- */
