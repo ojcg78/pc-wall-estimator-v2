@@ -1084,6 +1084,71 @@ def render_walls_tab():
                         elif eo_unit == "$/m²":
                             eo_costs[eo_label.strip()] = eo_value
 
+        # --- Review Checklist (barra lateral) -----------------------------
+        # Vive en la sidebar y se recalcula en cada rerun, así que se va
+        # actualizando en vivo a medida que el usuario carga datos en
+        # cualquiera de las 3 sub-pestañas — no es un checkpoint al final,
+        # es una guía que acompaña mientras se trabaja.
+        openings_summary = (
+            f"{number_of_openings} opening(s), {opening_area:.2f} m² total"
+            if has_openings == "Yes" and number_of_openings > 0
+            else "None"
+        )
+        dowels_summary = (
+            f"Included — {total_dowel_weight:.2f} kg"
+            if dowels == "Yes"
+            else "Not included"
+        )
+        reo_summary = (
+            f"Reo Rate only — {reo_rate:.1f} kg/m³"
+            if use_reo_rate_only == "Use only Reo Rate"
+            else f"{len(detailed_sections_data)} bar/mesh section(s) configured"
+        )
+
+        additional_items = []
+        if ripbox > 0:
+            additional_items.append(f"Ripbox {ripbox:.2f} m")
+        if ferrules > 0:
+            additional_items.append(f"Ferrules {ferrules}")
+        if Threadbar > 0:
+            additional_items.append(f"Threadbar {Threadbar}")
+        if couplers > 0:
+            additional_items.append(f"Couplers {couplers}")
+        if lifters_per_panel > 0:
+            additional_items.append(f"{lifters_per_panel} lifter(s)/panel")
+        if special_accessories_per_m2 > 0:
+            additional_items.append(f"Special accessories {special_accessories_per_m2:.2f}/m²")
+        if num_custom_elements > 0:
+            additional_items.append(f"{num_custom_elements} custom element(s)")
+        additional_summary = ", ".join(additional_items) if additional_items else "None"
+
+        waste_applied = [
+            label for label, val in [
+                ("Concrete", waste_concrete), ("Steel", waste_steel),
+                ("Trimer Bar", waste_trimmer), ("Mesh", waste_mesh), ("Ripbox", waste_ripbox)
+            ] if val and val > 0
+        ]
+        waste_summary = ", ".join(waste_applied) if waste_applied else "None applied"
+
+        eo_summary = f"{num_eo} item(s)" if num_eo > 0 else "None"
+
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("##### :material/fact_check: Review Checklist")
+        st.sidebar.caption("Geometry")
+        st.sidebar.markdown(f"Panels: **{number_of_panels}** · Area: **{wall_area:.2f} m²** · Thickness: **{wall_thickness} mm**")
+        st.sidebar.markdown(f"Concrete Type: **{concrete_type}**")
+        st.sidebar.markdown(f"Openings: **{openings_summary}**")
+        st.sidebar.caption("Reinforcement")
+        st.sidebar.markdown(f"Bars/Mesh: **{reo_summary}**")
+        if extra_steel_kg > 0:
+            st.sidebar.markdown(f"Additional Steel: **{extra_steel_kg:.1f} kg**")
+        st.sidebar.markdown(f"Lap Splice: **{'Applied' if apply_lap_splice else 'Not applied'}**")
+        st.sidebar.markdown(f"Dowels: **{dowels_summary}**")
+        st.sidebar.caption("Costs & Extras")
+        st.sidebar.markdown(f"Additional Elements: **{additional_summary}**")
+        st.sidebar.markdown(f"Waste % applied to: **{waste_summary}**")
+        st.sidebar.markdown(f"EO Items: **{eo_summary}**")
+
 
 
     # (bars_weight_total, mesh_weight_total, trimer_bar_total y concrete_volume
@@ -1535,80 +1600,6 @@ def render_walls_tab():
 
 
     if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
-        # --- Review Before Pricing --------------------------------------
-        # Resumen de todo lo cargado en las 3 sub-pestañas (Geometry,
-        # Reinforcement, Costs & Extras), para que el usuario pueda hacer
-        # un último chequeo visual antes de confiar en el costo final —
-        # sin forzar un flujo de wizard, solo un checkpoint de una vista.
-        openings_summary = (
-            f"{number_of_openings} opening(s), {opening_area:.2f} m² total"
-            if has_openings == "Yes" and number_of_openings > 0
-            else "None"
-        )
-        dowels_summary = (
-            f"Included — {total_dowel_weight:.2f} kg"
-            if dowels == "Yes"
-            else "Not included"
-        )
-        reo_summary = (
-            f"Reo Rate only — {reo_rate:.1f} kg/m³"
-            if use_reo_rate_only == "Use only Reo Rate"
-            else f"{len(detailed_sections_data)} bar/mesh section(s) configured"
-        )
-        extra_steel_summary = f"<li><b>Additional Steel:</b> {extra_steel_kg:.1f} kg</li>" if extra_steel_kg > 0 else ""
-
-        additional_items = []
-        if ripbox > 0:
-            additional_items.append(f"Ripbox {ripbox:.2f} m")
-        if ferrules > 0:
-            additional_items.append(f"Ferrules {ferrules}")
-        if Threadbar > 0:
-            additional_items.append(f"Threadbar {Threadbar}")
-        if couplers > 0:
-            additional_items.append(f"Couplers {couplers}")
-        if lifters_per_panel > 0:
-            additional_items.append(f"{lifters_per_panel} lifter(s)/panel")
-        if special_accessories_per_m2 > 0:
-            additional_items.append(f"Special accessories {special_accessories_per_m2:.2f}/m²")
-        if num_custom_elements > 0:
-            additional_items.append(f"{num_custom_elements} custom element(s)")
-        additional_summary = ", ".join(additional_items) if additional_items else "None"
-
-        waste_applied = [
-            label for label, val in [
-                ("Concrete", waste_concrete), ("Steel", waste_steel),
-                ("Trimer Bar", waste_trimmer), ("Mesh", waste_mesh), ("Ripbox", waste_ripbox)
-            ] if val and val > 0
-        ]
-        waste_summary = ", ".join(waste_applied) if waste_applied else "None applied"
-
-        eo_summary = f"{num_eo} item(s)" if num_eo > 0 else "None"
-
-        with st.expander("Review Before Pricing", icon=":material/fact_check:", expanded=True):
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">straighten</span></span>Geometry</div>
-                <ul>
-                    <li><b>Panels:</b> {number_of_panels} &nbsp;·&nbsp; <b>Area:</b> {wall_area:.2f} m² &nbsp;·&nbsp; <b>Thickness:</b> {wall_thickness} mm</li>
-                    <li><b>Concrete Type:</b> {concrete_type}</li>
-                    <li><b>Openings:</b> {openings_summary}</li>
-                </ul>
-                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">construction</span></span>Reinforcement</div>
-                <ul>
-                    <li><b>Bars/Mesh:</b> {reo_summary}</li>
-                    {extra_steel_summary}
-                    <li><b>Lap Splice:</b> {"Applied" if apply_lap_splice else "Not applied"}</li>
-                    <li><b>Dowels:</b> {dowels_summary}</li>
-                </ul>
-                <div class="subtitle"><span class="pw-icon-badge"><span class="pw-icon">payments</span></span>Costs & Extras</div>
-                <ul>
-                    <li><b>Additional Elements:</b> {additional_summary}</li>
-                    <li><b>Waste % applied to:</b> {waste_summary}</li>
-                    <li><b>EO Items:</b> {eo_summary}</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
         # Mostrar resultados — el interruptor vive en la barra lateral (junto a
         # Cost Settings), pero acá dejamos un aviso visible para que no quede
         # escondido si alguien no se da cuenta de que existe.
