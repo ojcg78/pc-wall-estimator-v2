@@ -578,11 +578,22 @@ st.markdown(f"""
 if "project_configured" not in st.session_state:
     st.session_state.project_configured = False
 
+# --- Modo desarrollador oculto -----------------------------------------
+# El módulo de Columns todavía no se muestra a los usuarios normales (se
+# está guardando como sorpresa para más adelante). Para poder seguir
+# trabajándolo, entrando a la app con ?dev=1 al final de la URL se
+# desbloquea la opción de Columns en el menú. Sin ese parámetro, solo
+# aparece Walls — nadie más ve que Columns existe.
+_dev_mode = st.query_params.get("dev") == "1"
+
 if not st.session_state.project_configured:
     st.markdown("##### :material/apartment: Project Setup")
     menu_project_name = st.text_input("Project Name", key="menu_project_name", placeholder="e.g. Beard Street Apartments")
     menu_project_code = st.text_input("Project Code", key="menu_project_code", placeholder="e.g. A4980")
-    menu_estimate_type = st.radio("What would you like to estimate?", ["Walls", "Columns"], key="menu_estimate_type", horizontal=True)
+    if _dev_mode:
+        menu_estimate_type = st.radio("What would you like to estimate?", ["Walls", "Columns"], key="menu_estimate_type", horizontal=True)
+    else:
+        menu_estimate_type = "Walls"
     if st.button("Continue", icon=":material/arrow_forward:", type="primary"):
         st.session_state.project_configured = True
         st.session_state.project_name = menu_project_name
