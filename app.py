@@ -194,8 +194,8 @@ div[data-baseweb="select"]:hover > div {
     box-shadow: var(--pw-shadow-md);
 }
 .pw-header-left { display: flex; align-items: center; gap: 16px; }
-.pw-header-title { font-size: 21px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
-.pw-header-subtitle { font-size: 13px; color: var(--pw-text-secondary); margin: 2px 0 0 0; }
+.pw-header-title { font-size: 28px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
+.pw-header-subtitle { font-size: 14px; color: var(--pw-text-secondary); margin: 4px 0 0 0; }
 .pw-badge {
     background: var(--pw-success-bg); color: var(--pw-success-text);
     font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 999px;
@@ -314,24 +314,6 @@ div[data-testid="stExpander"] summary {
 [data-testid="stSidebarCollapseButton"] svg {
     color: var(--pw-ink) !important;
     fill: var(--pw-ink) !important;
-}
-
-/* --- Selector grande de módulo (Walls / Columns) en la pantalla de menú --- */
-.st-key-module_selector .stButton > button {
-    height: 90px !important;
-    font-size: 19px !important;
-    font-weight: 700 !important;
-    border-radius: 14px !important;
-}
-.st-key-module_selector .stButton > button[kind="secondary"] {
-    border: 1.5px solid var(--pw-border) !important;
-    color: var(--pw-navy) !important;
-}
-.st-key-module_selector .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #E4CB86, var(--pw-teal)) !important;
-    color: var(--pw-ink) !important;
-    border: none !important;
-    box-shadow: var(--pw-shadow-md) !important;
 }
 
 /* --- Pestañas de navegación --- */
@@ -575,7 +557,7 @@ logo_base64 = image_to_base64("concrete")
 st.markdown(f"""
 <div class="pw-header">
     <div class="pw-header-left">
-        <img src='data:image/png;base64,{logo_base64}' width='44' style='border-radius:10px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
+        <img src='data:image/png;base64,{logo_base64}' width='52' style='border-radius:12px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
         <div>
             <p class="pw-header-title">Precast Elements Estimator</p>
             <p class="pw-header-subtitle">Cost estimation for precast concrete elements fabrication</p>
@@ -596,39 +578,11 @@ st.markdown(f"""
 if "project_configured" not in st.session_state:
     st.session_state.project_configured = False
 
-if "menu_estimate_type_choice" not in st.session_state:
-    st.session_state.menu_estimate_type_choice = "Walls"
-
 if not st.session_state.project_configured:
-    st.markdown("### :material/apartment: Project Setup")
+    st.markdown("##### :material/apartment: Project Setup")
     menu_project_name = st.text_input("Project Name", key="menu_project_name", placeholder="e.g. Beard Street Apartments")
     menu_project_code = st.text_input("Project Code", key="menu_project_code", placeholder="e.g. A4980")
-
-    st.markdown("##### What would you like to estimate?")
-    with st.container(key="module_selector"):
-        col_w, col_c = st.columns(2)
-        with col_w:
-            if st.button(
-                "Walls",
-                icon=":material/apartment:",
-                key="menu_pick_walls",
-                use_container_width=True,
-                type="primary" if st.session_state.menu_estimate_type_choice == "Walls" else "secondary",
-            ):
-                st.session_state.menu_estimate_type_choice = "Walls"
-                st.rerun()
-        with col_c:
-            if st.button(
-                "Columns",
-                icon=":material/account_balance:",
-                key="menu_pick_columns",
-                use_container_width=True,
-                type="primary" if st.session_state.menu_estimate_type_choice == "Columns" else "secondary",
-            ):
-                st.session_state.menu_estimate_type_choice = "Columns"
-                st.rerun()
-    menu_estimate_type = st.session_state.menu_estimate_type_choice
-
+    menu_estimate_type = st.radio("What would you like to estimate?", ["Walls", "Columns"], key="menu_estimate_type", horizontal=True)
     if st.button("Continue", icon=":material/arrow_forward:", type="primary"):
         st.session_state.project_configured = True
         st.session_state.project_name = menu_project_name
@@ -645,11 +599,7 @@ with menu_col1:
         f"Estimating: **{st.session_state.estimate_type}**"
     )
 with menu_col2:
-    # Vuelve a la pantalla de menú sin perder nombre/código del proyecto —
-    # esos quedan guardados en session_state bajo las claves de sus propios
-    # widgets (menu_project_name / menu_project_code), así que reaparecen
-    # ya completos apenas se vuelve a esta pantalla.
-    if st.button("Back to Menu", key="menu_change_btn", icon=":material/arrow_back:", use_container_width=True):
+    if st.button("Change", key="menu_change_btn", icon=":material/settings_backup_restore:"):
         st.session_state.project_configured = False
         st.rerun()
 
