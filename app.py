@@ -773,7 +773,33 @@ def render_walls_tab():
         unsafe_allow_html=True
     )
 
-    sub_geom, sub_reo, sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
+    # Tab labels reflect completion state from the *previous* run's session_state
+    # (same approach as Columns: Streamlit fixes tab labels before this run's
+    # widgets are read, so a same-run checkmark isn't possible — but the prior
+    # state is a very close, practically-instant approximation once the user
+    # has interacted once).
+    _geom_done = (
+        st.session_state.get("num_panels_input", 0) > 0
+        and st.session_state.get("wall_area_input_text", "0") not in ("0", "0.0000", "", None)
+        and st.session_state.get("wall_thickness_input", 0) > 0
+    )
+    _reo_mode = st.session_state.get("use_reo_option", "Add to bars and mesh")
+    _reo_done = (
+        _reo_mode == "Use only Reo Rate" and st.session_state.get("reo_rate_input", 0) > 0
+    ) or (
+        _reo_mode == "Add to bars and mesh"
+        and (bool(st.session_state.get("hb_type_0")) or bool(st.session_state.get("vb_type_0")))
+    )
+    _costs_done = (
+        st.session_state.get("lifters_per_panel_input", 0) > 0
+        or st.session_state.get("special_accessories_input", 0) > 0
+    )
+
+    sub_geom, sub_reo, sub_costs = st.tabs([
+        f"{'✅ ' if _geom_done else ''}Geometry",
+        f"{'✅ ' if _reo_done else ''}Reinforcement",
+        f"{'✅ ' if _costs_done else ''}Costs & Extras",
+    ])
 
     with sub_geom:
         # Panel Dimensions
@@ -828,7 +854,7 @@ def render_walls_tab():
         with st.expander("Reinforcement", icon=":material/construction:", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                reo_rate = st.number_input("Reo Rate (kg/m³) (optional)", min_value=0.0, value=0.0)
+                reo_rate = st.number_input("Reo Rate (kg/m³) (optional)", min_value=0.0, value=0.0, key="reo_rate_input")
             with col2:
                 extra_steel_kg = st.number_input("Additional Steel Reinforcement (kg)", min_value=0.0, step=1.0, key="extra_steel_input_main")
             use_reo_rate_only = st.radio("Use only Reo Rate or add to bars/mesh?", ["Add to bars and mesh", "Use only Reo Rate"], index=0, key="use_reo_option")
@@ -959,9 +985,9 @@ def render_walls_tab():
             with col4:
                 couplers = st.number_input("Couplers (units)", value=0)
             with col5:
-                lifters_per_panel = st.number_input("Lifters per Panel", value=0)
+                lifters_per_panel = st.number_input("Lifters per Panel", value=0, key="lifters_per_panel_input")
             with col6:
-                special_accessories_per_m2 = st.number_input("Special Accessories per m²", min_value=0.0, value=0.0, step=0.1)
+                special_accessories_per_m2 = st.number_input("Special Accessories per m²", min_value=0.0, value=0.0, step=0.1, key="special_accessories_input")
 
             st.markdown("### :material/add_circle: Add Custom Additional Elements")
             num_custom_elements = st.number_input("How many additional elements do you want to add?", min_value=0, max_value=10, value=0)
