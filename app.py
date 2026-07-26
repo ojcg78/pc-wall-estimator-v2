@@ -638,19 +638,44 @@ def add_to_project_summary(kind, group_id, unit_label, price_per_unit, total_gro
     })
 
 
-def render_project_summary_panel():
+def render_project_summary_panel(editable=False):
     if st.session_state.project_summary:
         with st.expander(f"📊 Project Summary ({len(st.session_state.project_summary)} group(s) added)", expanded=False):
-            display_cols = []
-            for entry in st.session_state.project_summary:
-                for k in entry.keys():
-                    if not k.startswith("_") and k not in display_cols:
-                        display_cols.append(k)
-            summary_df = pd.DataFrame(st.session_state.project_summary).reindex(columns=display_cols)
-            st.dataframe(summary_df, hide_index=True, use_container_width=True)
+            if editable:
+                st.caption("Edit a Group ID or remove a group below. Everything else (prices, costs) reflects the actual calculation and can't be hand-edited here.")
+                hdr = st.columns([2, 3, 2, 2, 1])
+                for c, label in zip(hdr, ["Type", "Group ID", "Price", "Total Group Cost", ""]):
+                    c.markdown(f"**{label}**")
+                for i, entry in enumerate(st.session_state.project_summary):
+                    price_key = [k for k in entry if k.startswith("Price per")][0]
+                    row = st.columns([2, 3, 2, 2, 1])
+                    row[0].write(entry["Type"])
+                    new_group_id = row[1].text_input(
+                        "Group ID", value=entry["Group ID"], key=f"summary_edit_groupid_{i}", label_visibility="collapsed"
+                    )
+                    if new_group_id != entry["Group ID"]:
+                        st.session_state.project_summary[i]["Group ID"] = new_group_id
+                    row[2].write(f"${entry[price_key]:,.2f}")
+                    row[3].write(f"${entry['Total Group Cost']:,.2f}" if entry.get("Total Group Cost") is not None else "n/a")
+                    if row[4].button("🗑️", key=f"summary_delete_{i}", help="Remove this group"):
+                        st.session_state.project_summary.pop(i)
+                        st.rerun()
+            else:
+                display_cols = []
+                for entry in st.session_state.project_summary:
+                    for k in entry.keys():
+                        if not k.startswith("_") and k not in display_cols:
+                            display_cols.append(k)
+                summary_df = pd.DataFrame(st.session_state.project_summary).reindex(columns=display_cols)
+                st.dataframe(summary_df, hide_index=True, use_container_width=True)
+
             grand_total = sum(row.get("Total Group Cost") or 0 for row in st.session_state.project_summary)
             if grand_total > 0:
                 st.markdown(f"**Grand total (groups with a known quantity): ${grand_total:,.2f}**")
+
+            if not editable:
+                st.caption("Editing Group IDs, removing groups, and downloading the full report are available from the project menu.")
+                return
 
             summary_dl_col1, summary_dl_col2 = st.columns(2)
             with summary_dl_col1:
@@ -766,7 +791,7 @@ if not st.session_state.project_configured:
         value=st.session_state.get("project_code_menu", ""),
     )
 
-    render_project_summary_panel()
+    render_project_summary_panel(editable=True)
 
     if _dev_mode:
         st.markdown("##### What would you like to estimate?")
