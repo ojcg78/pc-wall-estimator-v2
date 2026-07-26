@@ -194,8 +194,8 @@ div[data-baseweb="select"]:hover > div {
     box-shadow: var(--pw-shadow-md);
 }
 .pw-header-left { display: flex; align-items: center; gap: 16px; }
-.pw-header-title { font-size: 28px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
-.pw-header-subtitle { font-size: 14px; color: var(--pw-text-secondary); margin: 4px 0 0 0; }
+.pw-header-title { font-size: 34px; font-weight: 800; color: var(--pw-navy); margin: 0; letter-spacing: -0.02em; }
+.pw-header-subtitle { font-size: 15px; color: var(--pw-text-secondary); margin: 4px 0 0 0; }
 .pw-badge {
     background: var(--pw-success-bg); color: var(--pw-success-text);
     font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 999px;
@@ -581,7 +581,7 @@ logo_base64 = image_to_base64("concrete")
 st.markdown(f"""
 <div class="pw-header">
     <div class="pw-header-left">
-        <img src='data:image/png;base64,{logo_base64}' width='52' style='border-radius:12px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
+        <img src='data:image/png;base64,{logo_base64}' width='58' style='border-radius:12px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
         <div>
             <p class="pw-header-title">Precast Elements Estimator</p>
             <p class="pw-header-subtitle">Cost estimation for precast concrete elements fabrication</p>
@@ -1840,13 +1840,11 @@ def render_walls_tab():
 
 
     if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
-        # Mostrar resultados — el interruptor vive en la barra lateral (junto a
-        # Cost Settings), pero acá dejamos un aviso visible para que no quede
-        # escondido si alguien no se da cuenta de que existe.
-        st.info("Results and the cost breakdown are available in the sidebar on the left.", icon=":material/arrow_back:")
-        st.sidebar.markdown("---")
-        st.sidebar.caption("View options")
-        show_results = st.sidebar.toggle(":material/bar_chart: Show Results", value=False)
+        toggle_col1, toggle_col2 = st.columns(2)
+        with toggle_col1:
+            show_results = st.toggle(":material/bar_chart: Show Results", value=False)
+        with toggle_col2:
+            show_cost_breakdown = st.toggle(":material/payments: Show Cost Breakdown", value=False)
 
         if show_results:
             st.markdown("## 📊 Results")
@@ -1946,7 +1944,7 @@ def render_walls_tab():
                 st.markdown("</ul></div>", unsafe_allow_html=True)
 
 
-        if st.sidebar.toggle(":material/payments: Show Cost Breakdown", value=False):
+        if show_cost_breakdown:
             st.markdown("### :material/payments: Cost Breakdown (per m²)")
             st.dataframe(
                 df_costs,
