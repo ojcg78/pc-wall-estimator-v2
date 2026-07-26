@@ -491,8 +491,6 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
 
 
 
-concrete_options = ["Concrete 50 MPa", "Concrete 65 MPa", "Concrete 50 MPa (Special Mix)"]
-
 # 📁 Archivo CSV donde se guardarán los costos
 COSTS_FILE = "costos_guardado.csv"
 
@@ -531,6 +529,13 @@ def load_costs(path, defaults, mtime):
 
 _costs_mtime = os.path.getmtime(COSTS_FILE) if os.path.exists(COSTS_FILE) else 0
 costs_df = load_costs(COSTS_FILE, default_costs_data, _costs_mtime)
+
+# Built from Cost Settings rather than a fixed list, so adding a new
+# concrete grade there (e.g. "Concrete 80 MPa") makes it selectable
+# straight away — no code change needed.
+concrete_options = sorted(
+    e for e in costs_df["Element"].astype(str) if e.startswith("Concrete ") and "MPa" in e
+)
 
 
 
