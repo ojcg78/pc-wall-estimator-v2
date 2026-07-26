@@ -52,7 +52,7 @@ from io import BytesIO
 
 
 def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
-                        concrete_options, float_input, safe_div):
+                        concrete_options, float_input, safe_div, add_to_project_summary):
     """Renders the full Columns cost-estimation UI and calculations.
 
     Parameters are the exact same shared objects already built in app.py —
@@ -499,6 +499,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 <p class="pw-metric-value" style="font-size:32px;">${col_price_per_m3:,.2f}</p>
             </div>
         """, unsafe_allow_html=True)
+
+        if st.button("➕ Add to Project Summary", key="col_add_to_summary_btn"):
+            add_to_project_summary("Columns", col_group_id, "m³", col_price_per_m3, col_total_group_cost)
+            st.toast("Added to Project Summary", icon=":material/check_circle:")
 
         # -------------------------------------------------------------- #
         # EXCEL EXPORT — the full per-column and per-group totals still
