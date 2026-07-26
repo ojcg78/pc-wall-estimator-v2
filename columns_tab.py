@@ -475,6 +475,51 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         col_total_group_cost = 0.0
 
     # ------------------------------------------------------------------ #
+    # REVIEW CHECKLIST (sidebar) — same live, always-updating pattern as
+    # Walls' Review Checklist. Confirms what's been entered so far; not
+    # gated behind any toggle, and separate from the $ cost breakdown.
+    # ------------------------------------------------------------------ #
+    col_geom_done = col_width_mm > 0 and col_depth_mm > 0 and col_avg_height > 0
+    col_reo_done = (
+        (col_steel_mode == "General Reo Rate (kg/m³)" and col_reo_rate_given > 0)
+        or (col_steel_mode == "Bar Detail (configure below)" and (col_long_qty > 0 or col_long_qty2 > 0))
+    )
+    col_costs_done = col_lifting_qty > 0 or col_accessories_qty > 0
+
+    if col_steel_mode == "General Reo Rate (kg/m³)":
+        col_reo_summary = f"General Reo Rate — {col_reo_rate_given:.1f} kg/m³"
+    else:
+        col_reo_summary = f"Bar detail — estimated {col_reo_rate_estimated:.1f} kg/m³"
+
+    col_dowels_summary = (
+        f"Included — {col_dowel_weight:.2f} kg ({col_dowel_mode})"
+        if col_dowel_mode != "Exclude" else "Excluded"
+    )
+
+    col_consumables_summary = f"{len(col_consumables)} item(s)" if col_consumables else "None"
+
+    col_waste_applied = [
+        label for label, val in [
+            ("Concrete", col_waste_concrete), ("Reinforcing Steel", col_waste_steel), ("Dowels", col_waste_dowel)
+        ] if val and val > 0
+    ]
+    col_waste_summary = ", ".join(col_waste_applied) if col_waste_applied else "None applied"
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("##### :material/fact_check: Review Checklist")
+    st.sidebar.caption(f"{'✅ ' if col_geom_done else ''}Geometry")
+    st.sidebar.markdown(f"Width x Depth: **{col_width_mm} x {col_depth_mm} mm** · Height: **{col_avg_height * 1000:.0f} mm**")
+    st.sidebar.markdown(f"Concrete Type: **{col_concrete_type or 'Not selected'}**")
+    st.sidebar.markdown(f"Group Qty: **{col_group_qty}**")
+    st.sidebar.caption(f"{'✅ ' if col_reo_done else ''}Reinforcement")
+    st.sidebar.markdown(f"Steel: **{col_reo_summary}**")
+    st.sidebar.markdown(f"Dowels: **{col_dowels_summary}**")
+    st.sidebar.caption(f"{'✅ ' if col_costs_done else ''}Costs & Extras")
+    st.sidebar.markdown(f"Lifting: **{col_lifting_qty}** · Special Accessories: **{col_accessories_qty}**")
+    st.sidebar.markdown(f"Additional Consumables: **{col_consumables_summary}**")
+    st.sidebar.markdown(f"Waste % applied to: **{col_waste_summary}**")
+
+    # ------------------------------------------------------------------ #
     # RESULTS — same sidebar pattern as Walls (Show Results / Show Cost
     # Breakdown toggles), and a single always-visible metric card showing
     # only the fabrication cost per m³ (no per-column or per-group total
@@ -501,11 +546,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     ]
 
     if col_volume_per_column > 0:
-        toggle_col1, toggle_col2 = st.columns(2)
-        with toggle_col1:
-            col_show_results = st.toggle(":material/bar_chart: Show Column Results", value=False, key="col_show_results")
-        with toggle_col2:
-            col_show_breakdown = st.toggle(":material/payments: Show Column Cost Breakdown", value=False, key="col_show_breakdown")
+        col_show_results = st.toggle(":material/bar_chart: Show Details (results & cost breakdown)", value=False, key="col_show_results")
+        col_show_breakdown = col_show_results
 
         if col_show_results:
             st.markdown("## :material/bar_chart: Results")
