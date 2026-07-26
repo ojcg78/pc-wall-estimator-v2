@@ -537,6 +537,7 @@ costs_df = load_costs(COSTS_FILE, default_costs_data, _costs_mtime)
 from PIL import Image
 import base64
 from io import BytesIO
+from datetime import datetime
 
 # --- Helper robusto para números float sin "rebotes" del widget ---
 def float_input(label: str, key: str, default: float = 0.0, decimals: int = 4, min_value: float = 0.0):
@@ -672,30 +673,135 @@ with menu_col2:
 # add_to_project_summary(...) after showing its own result, via an
 # "Add to Project Summary" button — nothing is added automatically, so
 # a group only counts once, when the user confirms it's ready.
+#
+# Each entry also carries the FULL detail used for that group's cost
+# (every input, plus its line-by-line cost breakdown) so the consolidated
+# report below can list everything the estimate was built from — not
+# just the summary figures. None of this is meant to persist beyond the
+# session: once the report is downloaded, "Clear Project Summary" (or
+# simply closing the tab) is all that's needed — nothing is saved
+# server-side.
 # ------------------------------------------------------------------ #
 if "project_summary" not in st.session_state:
     st.session_state.project_summary = []
 
 
-def add_to_project_summary(kind, group_id, unit_label, price_per_unit, total_group_cost):
+def add_to_project_summary(kind, group_id, unit_label, price_per_unit, total_group_cost, inputs=None, cost_breakdown=None):
     st.session_state.project_summary.append({
         "Type": kind,
         "Group ID": group_id or "N/A",
         f"Price per {unit_label}": round(price_per_unit, 2),
         "Total Group Cost": round(total_group_cost, 2) if total_group_cost else None,
+        "_inputs": inputs or [],
+        "_cost_breakdown": cost_breakdown.to_dict("records") if cost_breakdown is not None else [],
     })
 
 
 if st.session_state.project_summary:
     with st.expander(f"📊 Project Summary ({len(st.session_state.project_summary)} group(s) added)", expanded=False):
-        summary_df = pd.DataFrame(st.session_state.project_summary)
+        display_cols = [k for k in st.session_state.project_summary[0].keys() if not k.startswith("_")]
+        summary_df = pd.DataFrame(st.session_state.project_summary)[display_cols]
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
         grand_total = sum(row["Total Group Cost"] or 0 for row in st.session_state.project_summary)
         if grand_total > 0:
             st.markdown(f"**Grand total (groups with a known quantity): ${grand_total:,.2f}**")
-        if st.button("Clear Project Summary", key="clear_project_summary_btn", icon=":material/delete:"):
-            st.session_state.project_summary = []
-            st.rerun()
+
+        summary_dl_col1, summary_dl_col2 = st.columns(2)
+        with summary_dl_col1:
+            summary_output = BytesIO()
+            with pd.ExcelWriter(summary_output, engine="xlsxwriter") as summary_writer:
+                summary_workbook = summary_writer.book
+                bold_fmt = summary_workbook.add_format({"bold": True})
+                title_fmt = summary_workbook.add_format({"bold": True, "font_size": 13})
+                section_fmt = summary_workbook.add_format({"bold": True, "bg_color": "#E4E1D9"})
+                subsection_fmt = summary_workbook.add_format({"bold": True, "italic": True, "bg_color": "#F4F3F1"})
+                money_fmt = summary_workbook.add_format({"num_format": "$#,##0.00"})
+                total_fmt = summary_workbook.add_format({"bold": True, "top": 1, "num_format": "$#,##0.00"})
+
+                report_sheet = summary_workbook.add_worksheet("Report")
+                audit_sheet = summary_workbook.add_worksheet("Audit")
+                report_sheet.set_column("A:A", 34)
+                report_sheet.set_column("B:F", 16)
+                audit_sheet.set_column("A:A", 40)
+                audit_sheet.set_column("B:B", 24)
+
+                proj_line = f"Project: {st.session_state.get('project_name') or 'N/A'} ({st.session_state.get('project_code_menu') or 'N/A'})"
+                report_sheet.write(0, 0, proj_line, title_fmt)
+                report_sheet.write(1, 0, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} — {len(st.session_state.project_summary)} group(s)")
+                audit_sheet.write(0, 0, proj_line, title_fmt)
+                audit_sheet.write(1, 0, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} — {len(st.session_state.project_summary)} group(s)")
+
+                # --- Project-level totals block, so the grand total's origin is traceable at a glance ---
+                report_sheet.write(3, 0, "PROJECT TOTALS", section_fmt)
+                report_sheet.write(3, 1, "", section_fmt)
+                r_totals = 4
+                for e in st.session_state.project_summary:
+                    price_key = [k for k in e if k.startswith("Price per")][0]
+                    report_sheet.write(r_totals, 0, f"{e['Type']} — {e['Group ID']} ({price_key})")
+                    report_sheet.write(r_totals, 1, e[price_key], money_fmt)
+                    report_sheet.write(r_totals, 2, e["Total Group Cost"] if e["Total Group Cost"] is not None else "n/a",
+                                        money_fmt if e["Total Group Cost"] is not None else None)
+                    r_totals += 1
+                grand_total_val = sum(row["Total Group Cost"] or 0 for row in st.session_state.project_summary)
+                report_sheet.write(r_totals, 0, "GRAND TOTAL", bold_fmt)
+                report_sheet.write(r_totals, 2, grand_total_val, total_fmt)
+
+                r_report = r_totals + 3
+                r_audit = 3
+                for entry in st.session_state.project_summary:
+                    header = f"{entry['Type']} — {entry['Group ID']}"
+                    price_key = [k for k in entry if k.startswith("Price per")][0]
+
+                    # --- Report sheet: header + cost breakdown table for this group ---
+                    report_sheet.write(r_report, 0, header, section_fmt)
+                    report_sheet.write(r_report, 1, "", section_fmt)
+                    r_report += 1
+                    report_sheet.write(r_report, 0, price_key)
+                    report_sheet.write(r_report, 1, entry[price_key], money_fmt)
+                    r_report += 1
+                    if entry["Total Group Cost"] is not None:
+                        report_sheet.write(r_report, 0, "Total Group Cost")
+                        report_sheet.write(r_report, 1, entry["Total Group Cost"], money_fmt)
+                        r_report += 1
+                    r_report += 1
+                    if entry["_cost_breakdown"]:
+                        cb_df = pd.DataFrame(entry["_cost_breakdown"])
+                        for c_idx, col_name in enumerate(cb_df.columns):
+                            report_sheet.write(r_report, c_idx, col_name, bold_fmt)
+                        r_report += 1
+                        for _, row in cb_df.iterrows():
+                            is_total_row = str(row.iloc[0]).strip().lower() == "total cost"
+                            for c_idx, val in enumerate(row):
+                                report_sheet.write(r_report, c_idx, val, total_fmt if is_total_row else None)
+                            r_report += 1
+                    r_report += 2  # blank rows between groups
+
+                    # --- Audit sheet: header + every input for this group (with sub-sections) ---
+                    audit_sheet.write(r_audit, 0, header, section_fmt)
+                    audit_sheet.write(r_audit, 1, "", section_fmt)
+                    r_audit += 1
+                    for label, value in entry["_inputs"]:
+                        if label.startswith(">>> "):
+                            audit_sheet.write(r_audit, 0, label.replace(">>> ", ""), subsection_fmt)
+                            audit_sheet.write(r_audit, 1, "", subsection_fmt)
+                        else:
+                            audit_sheet.write(r_audit, 0, label)
+                            audit_sheet.write(r_audit, 1, str(value))
+                        r_audit += 1
+                    r_audit += 2  # blank rows between groups
+
+            st.download_button(
+                label="Download Project Summary Report",
+                icon=":material/download:",
+                data=summary_output.getvalue(),
+                file_name=f"{st.session_state.get('project_code_menu') or 'project'}_summary.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="project_summary_download_button",
+            )
+        with summary_dl_col2:
+            if st.button("Clear Project Summary", key="clear_project_summary_btn", icon=":material/delete:"):
+                st.session_state.project_summary = []
+                st.rerun()
 
 # 🔧 Función para calcular barras horizontales y verticales
 def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v, apply_lap):
@@ -1806,8 +1912,36 @@ def render_walls_tab():
             </div>
         """, unsafe_allow_html=True)
 
+        walls_audit_rows = [
+            (">>> GEOMETRY", ""),
+            ("Element Type", element_type or "N/A"),
+            ("Wall Area (m²)", wall_area), ("Wall Thickness (mm)", wall_thickness),
+            ("Number of Panels", number_of_panels), ("Concrete Type", concrete_type),
+
+            (">>> REINFORCEMENT", ""),
+            ("Apply Lap Splice", "Yes" if apply_lap_splice else "No"),
+            ("Total Steel Weight (kg)", round(total_steel_weight, 2)),
+            ("Total Steel per m² (kg/m²)", round(total_steel_weight_m2, 2)),
+
+            (">>> WASTE FACTORS APPLIED", ""),
+            ("Waste % applied to", waste_summary),
+
+            (">>> UNIT RATES USED (from Cost Settings)", ""),
+            (f"Concrete — {concrete_type or 'n/a'} ($/m³)", cost_dict.get(concrete_type, 0)),
+            ("Concrete Testing ($/m³)", cost_dict.get("Concrete Testing", 0)),
+            ("Wages ($/m²)", cost_dict.get("Wages", 0)),
+            ("Shopdrawings ($/m²)", cost_dict.get("Shopdrawings", 0)),
+            ("Formwork ($/m²)", cost_dict.get("Formwork", 0)),
+            ("Patching ($/m²)", cost_dict.get("Patching", 0)),
+
+            (">>> RESULTS", ""),
+            ("Total Cost per m² ($) — PRIMARY", round(total_cost_per_m2, 2)),
+            ("Total Cost ($) — reference", round(total_cost_per_m2 * wall_area, 2)),
+        ]
+
         if st.button("➕ Add to Project Summary", key="walls_add_to_summary_btn"):
-            add_to_project_summary("Walls", element_type, "m²", total_cost_per_m2, total_cost_per_m2 * wall_area)
+            add_to_project_summary("Walls", element_type, "m²", total_cost_per_m2, total_cost_per_m2 * wall_area,
+                                    inputs=walls_audit_rows, cost_breakdown=df_costs)
             st.toast("Added to Project Summary", icon=":material/check_circle:")
 
         # Descarga del reporte — último paso, una vez que ya se revisaron los
