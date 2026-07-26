@@ -838,6 +838,17 @@ with menu_col1:
     )
 with menu_col2:
     if st.button("Back to Menu", key="menu_change_btn", icon=":material/arrow_back:", use_container_width=True):
+        # Reset every group-specific field (Walls' and Columns') so the next
+        # group always starts at zero/blank — only project-level state
+        # (name, code, summary, login) survives the trip back to the menu.
+        _keep_keys = {
+            "project_configured", "project_name", "project_code_menu", "estimate_type",
+            "menu_estimate_type_choice", "project_summary", "password_correct",
+            "menu_project_name", "menu_project_code",
+        }
+        for _k in list(st.session_state.keys()):
+            if _k not in _keep_keys:
+                del st.session_state[_k]
         st.session_state.project_configured = False
         st.rerun()
 
