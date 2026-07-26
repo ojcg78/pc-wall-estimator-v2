@@ -660,6 +660,37 @@ with menu_col2:
         st.session_state.project_configured = False
         st.rerun()
 
+# ------------------------------------------------------------------ #
+# PROJECT SUMMARY — a running list of groups (Walls and/or Columns)
+# already priced in this session, with a grand total. Each module calls
+# add_to_project_summary(...) after showing its own result, via an
+# "Add to Project Summary" button — nothing is added automatically, so
+# a group only counts once, when the user confirms it's ready.
+# ------------------------------------------------------------------ #
+if "project_summary" not in st.session_state:
+    st.session_state.project_summary = []
+
+
+def add_to_project_summary(kind, group_id, unit_label, price_per_unit, total_group_cost):
+    st.session_state.project_summary.append({
+        "Type": kind,
+        "Group ID": group_id or "N/A",
+        f"Price per {unit_label}": round(price_per_unit, 2),
+        "Total Group Cost": round(total_group_cost, 2) if total_group_cost else None,
+    })
+
+
+if st.session_state.project_summary:
+    with st.expander(f"📊 Project Summary ({len(st.session_state.project_summary)} group(s) added)", expanded=False):
+        summary_df = pd.DataFrame(st.session_state.project_summary)
+        st.dataframe(summary_df, hide_index=True, use_container_width=True)
+        grand_total = sum(row["Total Group Cost"] or 0 for row in st.session_state.project_summary)
+        if grand_total > 0:
+            st.markdown(f"**Grand total (groups with a known quantity): ${grand_total:,.2f}**")
+        if st.button("Clear Project Summary", key="clear_project_summary_btn", icon=":material/delete:"):
+            st.session_state.project_summary = []
+            st.rerun()
+
 # 🔧 Función para calcular barras horizontales y verticales
 def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, placement_h, placement_v, apply_lap):
     spacing_h /= 1000 if spacing_h else 1  # Convertir a metros, evita división por 0
@@ -807,7 +838,7 @@ with st.sidebar:
 
 if st.session_state.estimate_type == "Columns":
     render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
-                        concrete_options, float_input, safe_div)
+                        concrete_options, float_input, safe_div, add_to_project_summary)
 
 
 def render_walls_tab():
@@ -1768,6 +1799,10 @@ def render_walls_tab():
                 <p class="pw-metric-value" style="font-size:32px;">${total_cost_per_m2:.2f}</p>
             </div>
         """, unsafe_allow_html=True)
+
+        if st.button("➕ Add to Project Summary", key="walls_add_to_summary_btn"):
+            add_to_project_summary("Walls", element_type, "m²", total_cost_per_m2, total_cost_per_m2 * wall_area)
+            st.toast("Added to Project Summary", icon=":material/check_circle:")
 
         # Descarga del reporte — último paso, una vez que ya se revisaron los
         # resultados en pantalla (antes aparecía antes de verlos).
