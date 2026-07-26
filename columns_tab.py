@@ -8,6 +8,7 @@ already-validated Walls calculation logic is never touched. app.py only
 needs two small additions — nothing inside app.py's existing Walls code
 changes at all.
 
+
 HOW TO WIRE THIS INTO app.py (2 edits, both additions — nothing removed
 from the Walls logic):
 
