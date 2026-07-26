@@ -766,6 +766,8 @@ if not st.session_state.project_configured:
         value=st.session_state.get("project_code_menu", ""),
     )
 
+    render_project_summary_panel()
+
     if _dev_mode:
         st.markdown("##### What would you like to estimate?")
         with st.container(key="module_selector"):
@@ -800,8 +802,6 @@ if not st.session_state.project_configured:
         st.session_state.project_code_menu = menu_project_code
         st.session_state.estimate_type = menu_estimate_type
         st.rerun()
-
-    render_project_summary_panel()
     st.stop()
 
 menu_col1, menu_col2 = st.columns([5, 1])
