@@ -1839,11 +1839,8 @@ def render_walls_tab():
 
 
     if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
-        toggle_col1, toggle_col2 = st.columns(2)
-        with toggle_col1:
-            show_results = st.toggle(":material/bar_chart: Show Results", value=False)
-        with toggle_col2:
-            show_cost_breakdown = st.toggle(":material/payments: Show Cost Breakdown", value=False)
+        show_results = st.toggle(":material/bar_chart: Show Details (results & cost breakdown)", value=False)
+        show_cost_breakdown = show_results
 
         if show_results:
             st.markdown("## 📊 Results")
