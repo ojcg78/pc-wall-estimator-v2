@@ -48,7 +48,9 @@ can collide with any variable used by the Walls module in app.py.
 
 import streamlit as st
 import pandas as pd
+import json
 from io import BytesIO
+from datetime import datetime
 
 
 def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
@@ -69,6 +71,44 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_project_name = st.session_state.get("project_name", "")
     st.caption(f"Project: **{col_project_name or 'N/A'}** ({col_project_code or 'N/A'})")
     col_group_id = st.text_input("Enter Column Group ID", placeholder="e.g. PC-01", key="col_group_id")
+
+    # ------------------------------------------------------------------ #
+    # SAVE / LOAD CONFIGURATION — export every input for this group as a
+    # JSON file, and re-load it later without re-typing everything. The
+    # uploader must run before the widgets below so it can pre-fill them
+    # via session_state on the rerun that follows a successful upload.
+    # Known limitation: dynamic "Additional Consumables" line items aren't
+    # included yet (only the fixed fields below) — those still need to be
+    # re-entered manually after loading a saved configuration.
+    # ------------------------------------------------------------------ #
+    COL_CONFIG_KEYS = [
+        "col_group_id", "col_width_mm", "col_depth_mm", "col_concrete_type", "col_geom_mode",
+        "col_group_vol_text", "col_group_qty_a", "col_avg_height_mm", "col_group_qty_b",
+        "col_cover_known", "col_cover_mm",
+        "col_long_qty", "col_long_bar", "col_long_qty2", "col_long_bar2", "col_apply_lap",
+        "col_tie_bar", "col_tie_spacing_mm", "col_tie_perim_mm", "col_lig_qty", "col_lig_bar",
+        "col_steel_mode", "col_reo_rate_given",
+        "col_dowel_mode", "col_dowel_bar", "col_dowel_qty_manual", "col_dowel_len_mm",
+        "col_lifting_qty", "col_accessories_qty", "col_num_consumables",
+        "col_waste_Concrete", "col_waste_Reinforcing_Steel", "col_waste_Dowels",
+    ]
+
+    with st.expander("Save / Load Configuration", icon=":material/save:", expanded=False):
+        cfg_upload = st.file_uploader("Load a saved configuration (.json)", type=["json"], key="col_config_uploader")
+        if cfg_upload is not None and st.session_state.get("col_last_loaded_file_id") != cfg_upload.file_id:
+            try:
+                loaded_cfg = json.loads(cfg_upload.getvalue().decode("utf-8"))
+                for k in COL_CONFIG_KEYS:
+                    if k in loaded_cfg:
+                        st.session_state[k] = loaded_cfg[k]
+                st.session_state["col_last_loaded_file_id"] = cfg_upload.file_id
+                st.rerun()
+            except Exception:
+                st.warning("Couldn't read that file — make sure it's a configuration exported from this app.", icon=":material/warning:")
+        st.caption(
+            "The download button for the current configuration appears further down, "
+            "once you've filled in the group details."
+        )
 
     col_sub_geom, col_sub_reo, col_sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
 
@@ -500,8 +540,65 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             </div>
         """, unsafe_allow_html=True)
 
+        col_audit_rows = [
+            (">>> GEOMETRY", ""),
+            ("Width (mm)", col_width_mm), ("Depth (mm)", col_depth_mm),
+            ("Geometry Mode", col_geom_mode), ("Average Height Used (mm)", round(col_avg_height * 1000, 0)),
+            ("Volume per Column (m3)", round(col_volume_per_column, 4)),
+            ("Reo Cover Known", col_cover_known), ("Reo Cover Used (mm)", round(col_cover * 1000, 0)),
+
+            (">>> REINFORCEMENT", ""),
+            ("Longitudinal Bars (Group 1)", f"{col_long_qty} x {col_long_bar}" if col_long_bar else "n/a"),
+            ("Longitudinal (Group 1) Weight (kg)", round(col_long_weight_1, 2)),
+            ("Longitudinal Bars (Group 2)", f"{col_long_qty2} x {col_long_bar2}" if col_long_bar2 else "n/a"),
+            ("Longitudinal (Group 2) Weight (kg)", round(col_long_weight_2, 2)),
+            ("Apply Lap Splice (40 x bar diameter)", "Yes" if col_apply_lap else "No"),
+            ("Tie Bar / Spacing", f"{col_tie_bar} @ {col_tie_spacing_mm}mm" if col_tie_bar else "n/a"),
+            ("Tie Perimeter Source", "Measured override" if col_tie_perimeter_override_mm > 0 else "Calculated from Width/Depth/Cover"),
+            ("Tie Perimeter Used (mm)", round(col_tie_perimeter * 1000, 1) if col_tie_bar else "n/a"),
+            ("Number of Ties", col_tie_count),
+            ("Ties Weight (kg)", round(col_tie_weight, 2)),
+            ("Lig Bar / Qty per Level", f"{col_lig_bar} x {col_lig_qty}" if col_lig_bar else "n/a"),
+            ("Ligs Weight (kg)", round(col_lig_weight, 2)),
+            ("Steel Costing Mode", col_steel_mode),
+            ("Reo Rate Given (kg/m3)", col_reo_rate_given if col_reo_rate_given else "n/a"),
+            ("Reo Rate Estimated from bars above (kg/m3)", round(col_reo_rate_estimated, 2)),
+            ("Reo Rate USED for costing (kg/m3)", round(col_reo_rate_used, 2)),
+
+            (">>> DOWELS / LIFTING / ACCESSORIES", ""),
+            ("Dowel Mode", col_dowel_mode),
+            ("Dowel Bar", col_dowel_bar or "n/a"),
+            ("Dowel Length Used (mm)", round(col_dowel_length * 1000, 1) if col_dowel_length else "n/a"),
+            ("Dowels per Column (used)", col_dowel_qty_used),
+            ("Dowels Total Weight (kg)", round(col_dowel_weight, 2)),
+            ("Lifting Points per Column", col_lifting_qty),
+            ("Special Accessories per Column", col_accessories_qty),
+
+            (">>> WASTE FACTORS APPLIED", ""),
+            ("Concrete Waste (%)", col_waste_concrete),
+            ("Reinforcing Steel Waste (%)", col_waste_steel),
+            ("Dowels Waste (%)", col_waste_dowel),
+
+            (">>> UNIT RATES USED (from Cost Settings)", ""),
+            (f"Concrete — {col_concrete_type or 'n/a'} ($/m3)", cost_dict.get(col_concrete_type, 0)),
+            ("Concrete Testing ($/m3)", cost_dict.get("Concrete Testing", 0)),
+            ("Steel Bars ($/kg)", cost_dict.get("Steel Bars", 0)),
+            ("Lifting ($/ea)", cost_dict.get("Lifting", 0)),
+            ("Special Accessories ($/ea)", cost_dict.get("Special Accessories", 0)),
+            ("Wages ($/m²)", cost_dict.get("Wages", 0)),
+            ("Shopdrawings ($/m²)", cost_dict.get("Shopdrawings", 0)),
+            ("Formwork ($/m²)", cost_dict.get("Formwork", 0)),
+            ("Patching ($/m²)", cost_dict.get("Patching", 0)),
+
+            (">>> RESULTS", ""),
+            ("Price per m3 ($) — PRIMARY", round(col_price_per_m3, 2)),
+            ("Price per Column ($) — reference", round(col_price_per_column, 2)),
+            ("Estimated Total Group Cost ($)", round(col_total_group_cost, 2) if col_total_group_cost > 0 else "n/a"),
+        ]
+
         if st.button("➕ Add to Project Summary", key="col_add_to_summary_btn"):
-            add_to_project_summary("Columns", col_group_id, "m³", col_price_per_m3, col_total_group_cost)
+            add_to_project_summary("Columns", col_group_id, "m³", col_price_per_m3, col_total_group_cost,
+                                    inputs=col_audit_rows, cost_breakdown=col_df_costs)
             st.toast("Added to Project Summary", icon=":material/check_circle:")
 
         # -------------------------------------------------------------- #
@@ -514,6 +611,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             workbook = writer.book
             col_df_costs.to_excel(writer, sheet_name="Report", startrow=6, index=False)
             worksheet = writer.sheets["Report"]
+            worksheet.set_column("A:A", 34)
+            worksheet.set_column("B:F", 16)
             worksheet.write("A1", f"Project: {col_project_name or 'N/A'} ({col_project_code or 'N/A'})")
             worksheet.write("A2", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A")
             worksheet.write("A3", f"Width x Depth: {col_width_mm} x {col_depth_mm} mm, Avg Height: {col_avg_height * 1000:.0f} mm")
@@ -523,49 +622,47 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 worksheet.write("A6", f"Estimated Total Group Cost: ${col_total_group_cost:,.2f}")
 
             bold_format = workbook.add_format({"bold": True})
+            section_format = workbook.add_format({"bold": True, "bg_color": "#E4E1D9"})
             money_format = workbook.add_format({"num_format": "$#,##0.00"})
             total_row_format = workbook.add_format({"bold": True, "top": 1})
             total_format = workbook.add_format({"bold": True, "top": 1, "num_format": "$#,##0.00"})
 
             audit_sheet = workbook.add_worksheet("Audit")
+            audit_sheet.set_column("A:A", 40)
+            audit_sheet.set_column("B:B", 24)
             audit_sheet.write("A1", f"Project: {col_project_name or 'N/A'} ({col_project_code or 'N/A'})", bold_format)
             audit_sheet.write("A2", f"Column Group ID: {col_group_id}" if col_group_id else "Column Group ID: N/A", bold_format)
-            audit_sheet.write("A3", "COLUMN INPUTS", bold_format)
-            audit_rows = [
-                ("Width (mm)", col_width_mm), ("Depth (mm)", col_depth_mm),
-                ("Geometry Mode", col_geom_mode), ("Average Height Used (mm)", round(col_avg_height * 1000, 0)),
-                ("Volume per Column (m3)", col_volume_per_column),
-                ("Reo Cover Known", col_cover_known), ("Reo Cover Used (mm)", round(col_cover * 1000, 0)),
-                ("Longitudinal Bars (Group 1)", f"{col_long_qty} x {col_long_bar}"),
-                ("Longitudinal Bars (Group 2)", f"{col_long_qty2} x {col_long_bar2}" if col_long_bar2 else "n/a"),
-                ("Tie Bar / Spacing", f"{col_tie_bar} @ {col_tie_spacing_mm}mm"),
-                ("Tie Perimeter (measured override, mm)", col_tie_perimeter_override_mm if col_tie_perimeter_override_mm > 0 else "auto"),
-                ("Lig Bar / Qty per Level", f"{col_lig_bar} x {col_lig_qty}"),
-                ("Steel Costing Mode", col_steel_mode),
-                ("Reo Rate Given (kg/m3)", col_reo_rate_given),
-                ("Reo Rate Estimated (kg/m3)", round(col_reo_rate_estimated, 2)),
-                ("Dowel Mode", col_dowel_mode), ("Dowel Bar", col_dowel_bar),
-                ("Dowels per Column (used)", col_dowel_qty_used),
-                ("Lifting Points per Column", col_lifting_qty),
-                ("Special Accessories per Column", col_accessories_qty),
-                ("Price per m3 ($) — PRIMARY", round(col_price_per_m3, 2)),
-                ("Price per Column ($) — reference", round(col_price_per_column, 2)),
-                ("Estimated Total Group Cost ($)", round(col_total_group_cost, 2) if col_total_group_cost > 0 else "n/a"),
-            ]
-            r = 4
-            for label, value in audit_rows:
-                audit_sheet.write(r, 0, label)
-                audit_sheet.write(r, 1, str(value))
+            audit_sheet.write("A3", f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            r = 5
+            for label, value in col_audit_rows:
+                if label.startswith(">>> "):
+                    audit_sheet.write(r, 0, label.replace(">>> ", ""), section_format)
+                    audit_sheet.write(r, 1, "", section_format)
+                else:
+                    audit_sheet.write(r, 0, label)
+                    audit_sheet.write(r, 1, str(value))
                 r += 1
 
-        st.download_button(
-            label="Download Excel Report",
-            icon=":material/download:",
-            data=col_output.getvalue(),
-            file_name=f"{col_project_code}_{col_group_id}.xlsx" if col_project_code or col_group_id else "columns_report.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="col_download_button",
-        )
+        col_dl1, col_dl2 = st.columns(2)
+        with col_dl1:
+            st.download_button(
+                label="Download Excel Report",
+                icon=":material/download:",
+                data=col_output.getvalue(),
+                file_name=f"{col_project_code}_{col_group_id}.xlsx" if col_project_code or col_group_id else "columns_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="col_download_button",
+            )
+        with col_dl2:
+            col_config_export = {k: st.session_state.get(k) for k in COL_CONFIG_KEYS}
+            st.download_button(
+                label="Download Configuration (JSON)",
+                icon=":material/save:",
+                data=json.dumps(col_config_export, indent=2),
+                file_name=f"{col_group_id or 'column_group'}_config.json",
+                mime="application/json",
+                key="col_config_download_button",
+            )
     else:
         st.warning(
             "Enter the column width, depth, and either the group volume & quantity, "
