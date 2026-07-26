@@ -501,10 +501,11 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     ]
 
     if col_volume_per_column > 0:
-        st.info("Results and the cost breakdown are available in the sidebar on the left.", icon=":material/arrow_back:")
-        st.sidebar.markdown("---")
-        st.sidebar.caption("Columns — view options")
-        col_show_results = st.sidebar.toggle(":material/bar_chart: Show Column Results", value=False, key="col_show_results")
+        toggle_col1, toggle_col2 = st.columns(2)
+        with toggle_col1:
+            col_show_results = st.toggle(":material/bar_chart: Show Column Results", value=False, key="col_show_results")
+        with toggle_col2:
+            col_show_breakdown = st.toggle(":material/payments: Show Column Cost Breakdown", value=False, key="col_show_breakdown")
 
         if col_show_results:
             st.markdown("## :material/bar_chart: Results")
@@ -524,7 +525,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 </div>
                 """, unsafe_allow_html=True)
 
-        if st.sidebar.toggle(":material/payments: Show Column Cost Breakdown", value=False, key="col_show_breakdown"):
+        if col_show_breakdown:
             st.markdown("### :material/payments: Cost Breakdown (per column)")
             st.dataframe(
                 col_df_costs,
