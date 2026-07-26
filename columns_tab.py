@@ -48,7 +48,6 @@ can collide with any variable used by the Walls module in app.py.
 
 import streamlit as st
 import pandas as pd
-import json
 from io import BytesIO
 from datetime import datetime
 
@@ -71,44 +70,6 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_project_name = st.session_state.get("project_name", "")
     st.caption(f"Project: **{col_project_name or 'N/A'}** ({col_project_code or 'N/A'})")
     col_group_id = st.text_input("Enter Column Group ID", placeholder="e.g. PC-01", key="col_group_id")
-
-    # ------------------------------------------------------------------ #
-    # SAVE / LOAD CONFIGURATION — export every input for this group as a
-    # JSON file, and re-load it later without re-typing everything. The
-    # uploader must run before the widgets below so it can pre-fill them
-    # via session_state on the rerun that follows a successful upload.
-    # Known limitation: dynamic "Additional Consumables" line items aren't
-    # included yet (only the fixed fields below) — those still need to be
-    # re-entered manually after loading a saved configuration.
-    # ------------------------------------------------------------------ #
-    COL_CONFIG_KEYS = [
-        "col_group_id", "col_width_mm", "col_depth_mm", "col_concrete_type", "col_geom_mode",
-        "col_group_vol_text", "col_group_qty_a", "col_avg_height_mm", "col_group_qty_b",
-        "col_cover_known", "col_cover_mm",
-        "col_long_qty", "col_long_bar", "col_long_qty2", "col_long_bar2", "col_apply_lap",
-        "col_tie_bar", "col_tie_spacing_mm", "col_tie_perim_mm", "col_lig_qty", "col_lig_bar",
-        "col_steel_mode", "col_reo_rate_given",
-        "col_dowel_mode", "col_dowel_bar", "col_dowel_qty_manual", "col_dowel_len_mm",
-        "col_lifting_qty", "col_accessories_qty", "col_num_consumables",
-        "col_waste_Concrete", "col_waste_Reinforcing_Steel", "col_waste_Dowels",
-    ]
-
-    with st.expander("Save / Load Configuration", icon=":material/save:", expanded=False):
-        cfg_upload = st.file_uploader("Load a saved configuration (.json)", type=["json"], key="col_config_uploader")
-        if cfg_upload is not None and st.session_state.get("col_last_loaded_file_id") != cfg_upload.file_id:
-            try:
-                loaded_cfg = json.loads(cfg_upload.getvalue().decode("utf-8"))
-                for k in COL_CONFIG_KEYS:
-                    if k in loaded_cfg:
-                        st.session_state[k] = loaded_cfg[k]
-                st.session_state["col_last_loaded_file_id"] = cfg_upload.file_id
-                st.rerun()
-            except Exception:
-                st.warning("Couldn't read that file — make sure it's a configuration exported from this app.", icon=":material/warning:")
-        st.caption(
-            "The download button for the current configuration appears further down, "
-            "once you've filled in the group details."
-        )
 
     col_sub_geom, col_sub_reo, col_sub_costs = st.tabs(["Geometry", "Reinforcement", "Costs & Extras"])
 
@@ -643,26 +604,14 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                     audit_sheet.write(r, 1, str(value))
                 r += 1
 
-        col_dl1, col_dl2 = st.columns(2)
-        with col_dl1:
-            st.download_button(
-                label="Download Excel Report",
-                icon=":material/download:",
-                data=col_output.getvalue(),
-                file_name=f"{col_project_code}_{col_group_id}.xlsx" if col_project_code or col_group_id else "columns_report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="col_download_button",
-            )
-        with col_dl2:
-            col_config_export = {k: st.session_state.get(k) for k in COL_CONFIG_KEYS}
-            st.download_button(
-                label="Download Configuration (JSON)",
-                icon=":material/save:",
-                data=json.dumps(col_config_export, indent=2),
-                file_name=f"{col_group_id or 'column_group'}_config.json",
-                mime="application/json",
-                key="col_config_download_button",
-            )
+        st.download_button(
+            label="Download Excel Report",
+            icon=":material/download:",
+            data=col_output.getvalue(),
+            file_name=f"{col_project_code}_{col_group_id}.xlsx" if col_project_code or col_group_id else "columns_report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="col_download_button",
+        )
     else:
         st.warning(
             "Enter the column width, depth, and either the group volume & quantity, "
