@@ -357,6 +357,42 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             with c2:
                 col_accessories_qty = st.number_input("Special Accessories per Column", min_value=0, value=0, step=1, key="col_accessories_qty")
 
+        with st.expander("Formwork Area Correction (Optional)", icon=":material/square_foot:", expanded=False):
+            st.caption(
+                "Off by default — nothing changes unless you turn this on. Columns are usually "
+                "cast lying down on the bed like a beam: the bed face and the open top face need "
+                "no formwork, only the two side faces do. The traditional method below (still the "
+                "default) instead uses the full 4-side perimeter, treating the column like a closed "
+                "box. Turning this on switches Wages/Shopdrawings/Formwork/Patching to the real "
+                "2-face area, scaled by the multiplier below — since a column's formed m² is built "
+                "in plywood with less reuse than Walls' metal profiles, it likely needs a higher "
+                "rate than Walls' to represent the same real cost, not the same rate applied to a "
+                "smaller area."
+            )
+            col_use_corrected_formwork = st.checkbox(
+                "Use corrected formwork area", value=False, key="col_use_corrected_formwork"
+            )
+            col_formwork_multiplier = 1.0
+            if col_use_corrected_formwork:
+                col_formwork_multiplier = st.number_input(
+                    "Column Labour Rate Multiplier (applied to Wages+Shopdrawings+Formwork+Patching combined)",
+                    min_value=0.0, value=1.0, step=0.1, key="col_formwork_multiplier",
+                    help="1.0 = same $/m² as Walls, applied to the smaller real area. Increase this to reflect the plywood/lower-reuse premium — tune it against the comparison below."
+                )
+                if col_width > 0 and col_depth > 0 and col_avg_height > 0:
+                    _preview_rate_sum = (
+                        cost_dict.get("Wages", 0) + cost_dict.get("Shopdrawings", 0)
+                        + cost_dict.get("Formwork", 0) + cost_dict.get("Patching", 0)
+                    )
+                    _preview_traditional_area = 2 * (col_width + col_depth) * col_avg_height
+                    _preview_corrected_area = 2 * min(col_width, col_depth) * col_avg_height
+                    _preview_traditional_cost = _preview_rate_sum * _preview_traditional_area
+                    _preview_corrected_cost = _preview_rate_sum * col_formwork_multiplier * _preview_corrected_area
+                    _preview_diff_pct = safe_div(_preview_corrected_cost - _preview_traditional_cost, _preview_traditional_cost)
+                    pc1, pc2 = st.columns(2)
+                    pc1.metric("Traditional method (labour $/column)", f"${_preview_traditional_cost:,.2f}")
+                    pc2.metric("With correction (labour $/column)", f"${_preview_corrected_cost:,.2f}", delta=f"{_preview_diff_pct:+.1%}")
+
         with st.expander("Additional Consumables", icon=":material/inventory_2:", expanded=False):
             st.caption(
                 "Add any consumables shown on the structural drawing that aren't covered above "
@@ -414,8 +450,15 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_formwork_cost = cost_dict.get("Formwork", 0)
     col_patching_cost = cost_dict.get("Patching", 0)
     col_perimeter = 2 * (col_width + col_depth)
-    col_surface_area = col_perimeter * col_avg_height
-    col_labour_cost = (col_wages_cost + col_shopdrawings_cost + col_formwork_cost + col_patching_cost) * col_surface_area
+    if col_use_corrected_formwork:
+        col_surface_area = 2 * min(col_width, col_depth) * col_avg_height
+        col_labour_cost = (
+            (col_wages_cost + col_shopdrawings_cost + col_formwork_cost + col_patching_cost)
+            * col_formwork_multiplier * col_surface_area
+        )
+    else:
+        col_surface_area = col_perimeter * col_avg_height
+        col_labour_cost = (col_wages_cost + col_shopdrawings_cost + col_formwork_cost + col_patching_cost) * col_surface_area
 
     col_materials_total = (
         col_concrete_cost + col_testing_cost + col_steel_cost + col_dowel_cost
@@ -507,6 +550,9 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             ("Geometry Mode", col_geom_mode), ("Average Height Used (mm)", round(col_avg_height * 1000, 0)),
             ("Volume per Column (m3)", round(col_volume_per_column, 4)),
             ("Reo Cover Known", col_cover_known), ("Reo Cover Used (mm)", round(col_cover * 1000, 0)),
+            ("Formwork Area Correction Used", "Yes" if col_use_corrected_formwork else "No (traditional 4-side perimeter)"),
+            ("Column Labour Rate Multiplier", col_formwork_multiplier if col_use_corrected_formwork else "n/a"),
+            ("Formwork Area Used for Labour Costing (m²/column)", round(col_surface_area, 3)),
 
             (">>> REINFORCEMENT", ""),
             ("Longitudinal Bars (Group 1)", f"{col_long_qty} x {col_long_bar}" if col_long_bar else "n/a"),
