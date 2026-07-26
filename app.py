@@ -609,8 +609,14 @@ _dev_mode = st.query_params.get("dev") == "1"
 
 if not st.session_state.project_configured:
     st.markdown("##### :material/apartment: Project Setup")
-    menu_project_name = st.text_input("Project Name", key="menu_project_name", placeholder="e.g. Beard Street Apartments")
-    menu_project_code = st.text_input("Project Code", key="menu_project_code", placeholder="e.g. A4980")
+    menu_project_name = st.text_input(
+        "Project Name", key="menu_project_name", placeholder="e.g. Beard Street Apartments",
+        value=st.session_state.get("project_name", ""),
+    )
+    menu_project_code = st.text_input(
+        "Project Code", key="menu_project_code", placeholder="e.g. A4980",
+        value=st.session_state.get("project_code_menu", ""),
+    )
 
     if _dev_mode:
         st.markdown("##### What would you like to estimate?")
