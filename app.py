@@ -699,10 +699,14 @@ def add_to_project_summary(kind, group_id, unit_label, price_per_unit, total_gro
 
 if st.session_state.project_summary:
     with st.expander(f"📊 Project Summary ({len(st.session_state.project_summary)} group(s) added)", expanded=False):
-        display_cols = [k for k in st.session_state.project_summary[0].keys() if not k.startswith("_")]
-        summary_df = pd.DataFrame(st.session_state.project_summary)[display_cols]
+        display_cols = []
+        for entry in st.session_state.project_summary:
+            for k in entry.keys():
+                if not k.startswith("_") and k not in display_cols:
+                    display_cols.append(k)
+        summary_df = pd.DataFrame(st.session_state.project_summary).reindex(columns=display_cols)
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
-        grand_total = sum(row["Total Group Cost"] or 0 for row in st.session_state.project_summary)
+        grand_total = sum(row.get("Total Group Cost") or 0 for row in st.session_state.project_summary)
         if grand_total > 0:
             st.markdown(f"**Grand total (groups with a known quantity): ${grand_total:,.2f}**")
 
@@ -759,12 +763,12 @@ if st.session_state.project_summary:
                     report_sheet.write(r_report, 0, price_key)
                     report_sheet.write(r_report, 1, entry[price_key], money_fmt)
                     r_report += 1
-                    if entry["Total Group Cost"] is not None:
+                    if entry.get("Total Group Cost") is not None:
                         report_sheet.write(r_report, 0, "Total Group Cost")
                         report_sheet.write(r_report, 1, entry["Total Group Cost"], money_fmt)
                         r_report += 1
                     r_report += 1
-                    if entry["_cost_breakdown"]:
+                    if entry.get("_cost_breakdown"):
                         cb_df = pd.DataFrame(entry["_cost_breakdown"])
                         for c_idx, col_name in enumerate(cb_df.columns):
                             report_sheet.write(r_report, c_idx, col_name, bold_fmt)
@@ -774,13 +778,19 @@ if st.session_state.project_summary:
                             for c_idx, val in enumerate(row):
                                 report_sheet.write(r_report, c_idx, val, total_fmt if is_total_row else None)
                             r_report += 1
+                    else:
+                        report_sheet.write(r_report, 0, "(No detailed cost breakdown available — this group was added before this report format existed. Remove it from the Project Summary and add it again to get full detail.)")
+                        r_report += 1
                     r_report += 2  # blank rows between groups
 
                     # --- Audit sheet: header + every input for this group (with sub-sections) ---
                     audit_sheet.write(r_audit, 0, header, section_fmt)
                     audit_sheet.write(r_audit, 1, "", section_fmt)
                     r_audit += 1
-                    for label, value in entry["_inputs"]:
+                    if not entry.get("_inputs"):
+                        audit_sheet.write(r_audit, 0, "(No detailed inputs available — this group was added before this report format existed. Remove it from the Project Summary and add it again to get full detail.)")
+                        r_audit += 1
+                    for label, value in entry.get("_inputs", []):
                         if label.startswith(">>> "):
                             audit_sheet.write(r_audit, 0, label.replace(">>> ", ""), subsection_fmt)
                             audit_sheet.write(r_audit, 1, "", subsection_fmt)
