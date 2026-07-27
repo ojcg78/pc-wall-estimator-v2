@@ -495,10 +495,12 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
         key=f"ubar_manual_len_{index}"
     )
     if u_bar_manual_length:
-        u_bar_leg_length = float_input(
-            f"U-Bar Leg Length (m) {index + 1}",
-            key=f"ubar_leg_len_text_{index}", default=0.0, decimals=4, min_value=0.0
+        u_bar_leg_length_mm = st.number_input(
+            f"U-Bar Single Leg Length (mm) {index + 1} — one leg only, not the full U shape",
+            min_value=0, step=10, value=0,
+            key=f"ubar_leg_len_mm_{index}"
         )
+        u_bar_leg_length = u_bar_leg_length_mm / 1000
     elif u_bar_type:
         u_bar_leg_length = (40 * bar_diameter_lookup[u_bar_type]) / 1000
     else:
