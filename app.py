@@ -474,6 +474,38 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
         key=f"trimer_place_{index}"
     )
 
+    # NUEVO: U-Bar (barra en U de borde, Bottom o Top)
+    u_bar_type = st.selectbox(
+        f"U-Bar Type {index + 1}",
+        [""] + list(steel_weight_lookup.keys()),
+        key=f"ubar_type_{index}"
+    )
+    u_bar_spacing = st.number_input(
+        f"U-Bar Spacing (mm) {index + 1}",
+        min_value=0, step=10, value=0,
+        key=f"ubar_spacing_{index}"
+    )
+    u_bar_location = st.radio(
+        f"U-Bar Location {index + 1}",
+        ["Bottom", "Top"],
+        key=f"ubar_location_{index}"
+    )
+    u_bar_manual_length = st.checkbox(
+        f"Enter U-Bar Leg Length Manually? {index + 1}",
+        key=f"ubar_manual_len_{index}"
+    )
+    if u_bar_manual_length:
+        u_bar_leg_length = float_input(
+            f"U-Bar Leg Length (m) {index + 1}",
+            key=f"ubar_leg_len_text_{index}", default=0.0, decimals=4, min_value=0.0
+        )
+    elif u_bar_type:
+        u_bar_leg_length = (40 * bar_diameter_lookup[u_bar_type]) / 1000
+    else:
+        u_bar_leg_length = 0.0
+        if u_bar_spacing > 0:
+            st.warning(f"Please select a valid U-Bar Type to calculate leg length. (Section {index + 1})")
+
     return {
     "horizontal_bar": bar_type_h,
     "horizontal_spacing": spacing_h,
@@ -486,6 +518,10 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
     "mesh_placement": mesh_placement,
     "trimer_bar": trimer_type,
     "trimer_placement": trimer_placement,
+    "u_bar_type": u_bar_type,
+    "u_bar_spacing": u_bar_spacing,
+    "u_bar_location": u_bar_location,
+    "u_bar_leg_length": u_bar_leg_length,
 }
 
 
@@ -934,6 +970,20 @@ def calculate_trimer_bar_weight(area, num_panels, wall_thickness, trimer_type, p
 
 
 
+def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_spacing, u_bar_leg_length):
+    if not u_bar_type or num_panels == 0 or u_bar_spacing <= 0 or u_bar_leg_length <= 0:
+        return 0, 0
+    avg_width = min(4.2, area / num_panels) if num_panels > 0 else 0
+    bars_per_panel = avg_width / (u_bar_spacing / 1000)
+    bars_per_panel = int(bars_per_panel) + (1 if bars_per_panel % 1 > 0 else 0)
+    total_bars = bars_per_panel * num_panels
+    short_leg = wall_thickness / 1000
+    length_per_bar = (2 * u_bar_leg_length) + short_leg
+    weight_per_m = steel_weight_lookup.get(u_bar_type, 0)
+    total_weight = total_bars * length_per_bar * weight_per_m
+    return (total_weight / area if area > 0 else 0), total_weight
+
+
 def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panels, opening_area, num_openings):
     bars_weight_m2, bars_weight_total = calculate_rebar_weight(
         area,
@@ -957,10 +1007,16 @@ def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panel
         opening_area, num_openings
     )
 
+    u_bar_m2, u_bar_weight_total = calculate_u_bar_weight(
+        area, num_panels, wall_thickness,
+        section["u_bar_type"], section["u_bar_spacing"], section["u_bar_leg_length"]
+    )
+
     return {
         "bars_total": bars_weight_total,
         "mesh_total": mesh_weight_total,
-        "trimer_total": trimer_weight_total
+        "trimer_total": trimer_weight_total,
+        "u_bar_total": u_bar_weight_total
     }
 
 
@@ -1114,7 +1170,7 @@ def render_walls_tab():
                     apply_lap_splice, number_of_panels,
                     opening_area, number_of_openings
                 )
-                section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"]
+                section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"] + result["u_bar_total"]
                 total_section_weight += section_weight
                 st.write(f":material/label: Section {i+1}: {section_weight:.2f} kg")
 
@@ -1252,6 +1308,7 @@ def render_walls_tab():
         bars_weight_total = 0
         mesh_weight_total = 0
         trimer_bar_total = 0
+        u_bar_total = 0
         for section in detailed_sections_data:
             result = calculate_section_weight(
                 section, wall_area, wall_thickness,
@@ -1261,6 +1318,7 @@ def render_walls_tab():
             bars_weight_total += result["bars_total"]
             mesh_weight_total += result["mesh_total"]
             trimer_bar_total += result["trimer_total"]
+            u_bar_total += result["u_bar_total"]
 
         concrete_volume = wall_area * (wall_thickness / 1000)  # 🔹 Convertimos a metros cúbicos
 
@@ -1273,6 +1331,7 @@ def render_walls_tab():
                 "Concrete": concrete_volume,
                 "Steel Bars (H+V)": bars_weight_total,
                 "Trimer Bar": trimer_bar_total,
+                "U-Bar": u_bar_total,
                 "Mesh": mesh_weight_total,
                 "Ripbox": ripbox
             }
@@ -1291,6 +1350,7 @@ def render_walls_tab():
             waste_concrete = waste_percentages.get("Concrete", 0.0)
             waste_steel = waste_percentages.get("Steel Bars (H+V)", 0.0)
             waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
+            waste_u_bar = waste_percentages.get("U-Bar", 0.0)
             waste_mesh = waste_percentages.get("Mesh", 0.0)
             waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
@@ -1409,6 +1469,7 @@ def render_walls_tab():
         bars_weight_total * (1 + waste_steel / 100) +
         mesh_weight_total * (1 + waste_mesh / 100) +
         trimer_bar_total * (1 + waste_trimmer / 100) +
+        u_bar_total * (1 + waste_u_bar / 100) +
         additional_reinforcement_kg_total
     )
 
@@ -1461,6 +1522,7 @@ def render_walls_tab():
         # 🔹 Refuerzo desglosado
         "Steel Bars (H+V)": (bars_weight_m2 * (1 + waste_steel / 100) * cost_dict.get("Steel Bars", 0)),
         "Trimer Bar": (trimer_bar_m2 * (1 + waste_trimmer / 100) * cost_dict.get("Steel Bars", 0)),
+        "U-Bar": (u_bar_m2 * (1 + waste_u_bar / 100) * cost_dict.get("Steel Bars", 0)),
         "Mesh": mesh_cost_per_m2 * (1 + waste_mesh / 100),
         "Reo Rate": (reo_rate * (wall_thickness / 1000)) * cost_dict.get("Steel Bars", 0),
         "Additional Reinforcement": (extra_steel_kg * cost_dict.get("Steel Bars", 0)) / wall_area if wall_area > 0 else 0,
@@ -1491,6 +1553,7 @@ def render_walls_tab():
         "Concrete Testing": "m³",
         "Steel Bars (H+V)": "kg",
         "Trimer Bar": "kg",
+        "U-Bar": "kg",
         "Mesh": "kg",
         "Reo Rate": "kg",
         "Additional Reinforcement": "kg",
@@ -1540,6 +1603,7 @@ def render_walls_tab():
         "Concrete Testing": concrete_volume / wall_area if wall_area > 0 else 0,
         "Steel Bars (H+V)": bars_weight_m2 * (1 + waste_steel / 100),
         "Trimer Bar": trimer_bar_m2 * (1 + waste_trimmer / 100),
+        "U-Bar": u_bar_m2 * (1 + waste_u_bar / 100),
         "Mesh": mesh_weight_m2 * (1 + waste_mesh / 100),
         "Reo Rate": reo_rate_m2,
         "Additional Reinforcement": extra_steel_kg_m2,
@@ -1585,6 +1649,7 @@ def render_walls_tab():
     cost_mapping = {
         "Steel Bars (H+V)": "Steel Bars",
         "Trimer Bar": "Steel Bars",
+        "U-Bar": "Steel Bars",
         "Reo Rate": "Steel Bars",
         "Additional Reinforcement": "Steel Bars",
         "Dowel Bars": "Steel Bars",
@@ -1673,6 +1738,8 @@ def render_walls_tab():
                 reinforcement_parts.append(f"{section['mesh_type']} Mesh")
             if section["trimer_bar"]:
                 reinforcement_parts.append(f"{section['trimer_bar']} Trimer Bar")
+            if section["u_bar_type"] and section["u_bar_spacing"] > 0:
+                reinforcement_parts.append(f"{section['u_bar_type']}-{section['u_bar_spacing']} U-Bar {section['u_bar_location']}")
         if reo_rate > 0:
             reinforcement_parts.append(f"{reo_rate:.0f} kg/m³ Reo Rate")
         if extra_steel_kg > 0:
@@ -1759,6 +1826,7 @@ def render_walls_tab():
         audit_sheet.write(f"B{start_row}", "Bars (kg)")
         audit_sheet.write(f"C{start_row}", "Mesh (kg)")
         audit_sheet.write(f"D{start_row}", "Trimer Bar (kg)")
+        audit_sheet.write(f"E{start_row}", "U-Bar (kg)")
 
         for i, section in enumerate(detailed_sections_data):
             result = calculate_section_weight(
@@ -1771,6 +1839,7 @@ def render_walls_tab():
         audit_sheet.write(f"B{start_row}", result["bars_total"])
         audit_sheet.write(f"C{start_row}", result["mesh_total"])
         audit_sheet.write(f"D{start_row}", result["trimer_total"])
+        audit_sheet.write(f"E{start_row}", result["u_bar_total"])
 
         # 🔹 Refuerzo Adicional y Reo Rate
         start_row += 2
