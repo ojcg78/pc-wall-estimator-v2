@@ -1458,6 +1458,7 @@ def render_walls_tab():
     bars_weight_m2 = bars_weight_total / wall_area if wall_area > 0 else 0
     mesh_weight_m2 = mesh_weight_total / wall_area if wall_area > 0 else 0
     trimer_bar_m2 = trimer_bar_total / wall_area if wall_area > 0 else 0
+    u_bar_m2 = u_bar_total / wall_area if wall_area > 0 else 0
 
     additional_reinforcement_kg_total = extra_steel_kg
 
