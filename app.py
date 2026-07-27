@@ -2032,6 +2032,31 @@ def render_walls_tab():
             </div>
         """, unsafe_allow_html=True)
 
+        _wall_section_rows = []
+        for _i, _sec in enumerate(detailed_sections_data):
+            _parts = []
+            if _sec["horizontal_bar"] and _sec["horizontal_spacing"] > 0:
+                _parts.append(f"H: {_sec['horizontal_bar']} @ {_sec['horizontal_spacing']}mm ({_sec['horizontal_placement']})")
+            if _sec["vertical_bar"] and _sec["vertical_spacing"] > 0:
+                _parts.append(f"V: {_sec['vertical_bar']} @ {_sec['vertical_spacing']}mm ({_sec['vertical_placement']})")
+            if _sec["mesh_reinforcement"] == "Yes" and _sec["mesh_type"]:
+                _parts.append(f"Mesh: {_sec['mesh_type']} ({_sec['mesh_placement']})")
+            if _sec["trimer_bar"]:
+                _parts.append(f"Trimer: {_sec['trimer_bar']} ({_sec['trimer_placement']})")
+            if _sec.get("u_bar_type") and _sec.get("u_bar_spacing", 0) > 0:
+                _parts.append(f"U-Bar: {_sec['u_bar_type']} @ {_sec['u_bar_spacing']}mm ({_sec['u_bar_location']})")
+            _wall_section_rows.append((f"Section {_i + 1}", ", ".join(_parts) if _parts else "Not configured"))
+
+        if dowels == "Yes":
+            if dowel_calculation_method == "Enter Manually":
+                _dowel_row = ("Dowels", f"Manual entry — {total_dowel_weight:.2f} kg total")
+            elif dowel_bar_type:
+                _dowel_row = ("Dowels", f"{dowel_bar_type} @ {dowel_spacing}mm — {total_dowel_weight:.2f} kg total")
+            else:
+                _dowel_row = ("Dowels", "Configured but incomplete")
+        else:
+            _dowel_row = ("Dowels", "Not included")
+
         walls_audit_rows = [
             (">>> GEOMETRY", ""),
             ("Element Type", element_type or "N/A"),
@@ -2040,6 +2065,10 @@ def render_walls_tab():
 
             (">>> REINFORCEMENT", ""),
             ("Apply Lap Splice", "Yes" if apply_lap_splice else "No"),
+            ("Reo Rate (kg/m³)", reo_rate if reo_rate > 0 else "Not used"),
+            ("Additional Steel Reinforcement (kg)", extra_steel_kg if extra_steel_kg > 0 else "Not used"),
+        ] + _wall_section_rows + [
+            _dowel_row,
             ("Total Steel Weight (kg)", round(total_steel_weight, 2)),
             ("Total Steel per m² (kg/m²)", round(total_steel_weight_m2, 2)),
 
