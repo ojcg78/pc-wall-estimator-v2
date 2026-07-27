@@ -333,7 +333,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     if col_dowel_mode == "Exclude":
         col_dowel_qty_used = 0
     elif col_dowel_mode == "Estimate (1 per longitudinal bar)":
-        col_dowel_qty_used = col_long_qty
+        # CORREGIDO: antes solo contaba col_long_qty (Grupo 1), ignorando
+        # col_long_qty2 (Grupo 2) — subestimaba dowels en columnas con dos
+        # grupos de barras longitudinales (ej. esquinas + caras).
+        col_dowel_qty_used = col_long_qty + col_long_qty2
     else:
         col_dowel_qty_used = col_dowel_qty_manual
 
