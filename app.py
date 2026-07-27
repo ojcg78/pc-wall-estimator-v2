@@ -491,7 +491,7 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
         key=f"ubar_location_{index}"
     )
     u_bar_manual_length = st.checkbox(
-        f"Enter U-Bar Leg Length Manually? (Section {index + 1})",
+        f"Enter U-Bar Leg Length Manually? {index + 1}",
         key=f"ubar_manual_len_{index}"
     )
     if u_bar_manual_length:
@@ -504,7 +504,7 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
     else:
         u_bar_leg_length = 0.0
         if u_bar_spacing > 0:
-            st.warning(f"Please select a valid U-Bar Type to calculate leg length. (Section {index + 1})")
+            st.warning(f"Please select a valid U-Bar Type to calculate leg length. {index + 1}")
 
     return {
     "horizontal_bar": bar_type_h,
