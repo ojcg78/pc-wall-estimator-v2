@@ -491,7 +491,7 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
         key=f"ubar_location_{index}"
     )
     u_bar_manual_length = st.checkbox(
-        f"Enter U-Bar Leg Length Manually? {index + 1}",
+        f"Enter U-Bar Leg Length Manually? (Section {index + 1})",
         key=f"ubar_manual_len_{index}"
     )
     if u_bar_manual_length:
