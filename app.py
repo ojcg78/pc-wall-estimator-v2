@@ -1138,7 +1138,7 @@ def render_walls_tab():
                     min_value=0.0,
                 )
                 if avg_panel_height == 0:
-                    st.caption(":material/warning: Required — average height across panels, used for Trimer Bar / Dowels / U-Bar geometry.")
+                    st.caption(":material/warning: Required — average height across panels.")
 
         with st.expander("Openings", icon=":material/window:"):
             has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
