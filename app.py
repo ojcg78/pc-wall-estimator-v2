@@ -935,12 +935,16 @@ def calculate_mesh_weight(area, mesh_type, mesh_placement, apply_lap):
 
 
 # 🔧 Función mejorada para calcular Trimer Bars con protección contra errores
-def calculate_trimer_bar_weight(area, num_panels, wall_thickness, trimer_type, placement, apply_lap, opening_area, num_openings):
-    if not trimer_type or num_panels == 0:
+def calculate_trimer_bar_weight(area, num_panels, wall_thickness, trimer_type, placement, apply_lap, opening_area, num_openings, avg_panel_height=0):
+    if not trimer_type or num_panels == 0 or avg_panel_height <= 0:
         return 0, 0
 
-    avg_width = area / num_panels if num_panels > 0 else 0
-    perimeter_per_panel = 2 * (avg_width + (wall_thickness / 1000))
+    # CORREGIDO: el perímetro real de un panel es ancho + alto (no ancho + espesor).
+    # avg_width ahora se deriva correctamente: área÷paneles da m² por panel, que
+    # dividido por la altura promedio da el ancho real (antes se usaba el área
+    # directamente como si fuera un largo, inflando el resultado varias veces).
+    avg_width = (area / num_panels) / avg_panel_height if num_panels > 0 else 0
+    perimeter_per_panel = 2 * (avg_width + avg_panel_height)
     total_length = perimeter_per_panel * num_panels
 
     if placement == "EF":
@@ -972,10 +976,11 @@ def calculate_trimer_bar_weight(area, num_panels, wall_thickness, trimer_type, p
 
 
 
-def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_spacing, u_bar_leg_length):
-    if not u_bar_type or num_panels == 0 or u_bar_spacing <= 0 or u_bar_leg_length <= 0:
+def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_spacing, u_bar_leg_length, avg_panel_height=0):
+    if not u_bar_type or num_panels == 0 or u_bar_spacing <= 0 or u_bar_leg_length <= 0 or avg_panel_height <= 0:
         return 0, 0
-    avg_width = min(4.2, area / num_panels) if num_panels > 0 else 0
+    # CORREGIDO: mismo ajuste que Trimer Bar — área÷paneles÷altura, no área÷paneles directo.
+    avg_width = min(4.2, (area / num_panels) / avg_panel_height) if num_panels > 0 else 0
     bars_per_panel = avg_width / (u_bar_spacing / 1000)
     bars_per_panel = int(bars_per_panel) + (1 if bars_per_panel % 1 > 0 else 0)
     total_bars = bars_per_panel * num_panels
@@ -986,7 +991,7 @@ def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_s
     return (total_weight / area if area > 0 else 0), total_weight
 
 
-def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panels, opening_area, num_openings):
+def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panels, opening_area, num_openings, avg_panel_height=0):
     bars_weight_m2, bars_weight_total = calculate_rebar_weight(
         area,
         section["horizontal_spacing"],
@@ -1006,12 +1011,12 @@ def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panel
     trimer_bar_m2, trimer_weight_total = calculate_trimer_bar_weight(
         area, num_panels, wall_thickness,
         section["trimer_bar"], section["trimer_placement"], apply_lap,
-        opening_area, num_openings
+        opening_area, num_openings, avg_panel_height
     )
 
     u_bar_m2, u_bar_weight_total = calculate_u_bar_weight(
         area, num_panels, wall_thickness,
-        section["u_bar_type"], section["u_bar_spacing"], section["u_bar_leg_length"]
+        section["u_bar_type"], section["u_bar_spacing"], section["u_bar_leg_length"], avg_panel_height
     )
 
     return {
@@ -1091,7 +1096,7 @@ def render_walls_tab():
     with sub_geom:
         # Panel Dimensions
         with st.expander("Panel Dimensions", icon=":material/straighten:", expanded=True):
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3, col4, col5 = st.columns(5)
             with col1:
                 number_of_panels = st.number_input(
                     "Number of Panels",
@@ -1123,6 +1128,16 @@ def render_walls_tab():
                     index=0,
                     key="concrete_type_select",
                 )
+            with col5:
+                avg_panel_height = float_input(
+                    "Average Panel Height (m)",
+                    key="avg_panel_height_input_text",
+                    default=0.0,
+                    decimals=2,
+                    min_value=0.0,
+                )
+                if avg_panel_height == 0:
+                    st.caption(":material/warning: Required — average height across panels, used for Trimer Bar / Dowels / U-Bar geometry.")
 
         with st.expander("Openings", icon=":material/window:"):
             has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
@@ -1170,7 +1185,7 @@ def render_walls_tab():
                 result = calculate_section_weight(
                     section, wall_area, wall_thickness,
                     apply_lap_splice, number_of_panels,
-                    opening_area, number_of_openings
+                    opening_area, number_of_openings, avg_panel_height
                 )
                 section_weight = result["bars_total"] + result["mesh_total"] + result["trimer_total"] + result["u_bar_total"]
                 total_section_weight += section_weight
@@ -1238,12 +1253,12 @@ def render_walls_tab():
                         dowel_length = 0.0
                         st.warning("Please select a valid Dowel Bar Type to calculate length.", icon=":material/warning:")
 
-                    # 🔹 Ancho promedio del panel (respetando límite de 4.2 m)
-                    if number_of_panels > 0:
-                        avg_panel_width = min(4.2, wall_area / number_of_panels)
+                    # 🔹 Ancho promedio del panel (área÷paneles÷altura, respetando límite de 4.2 m)
+                    if number_of_panels > 0 and avg_panel_height > 0:
+                        avg_panel_width = min(4.2, (wall_area / number_of_panels) / avg_panel_height)
                     else:
                         avg_panel_width = 0
-                        st.warning("Please enter number of panels greater than zero to calculate dowel bars.", icon=":material/warning:")
+                        st.warning("Please enter number of panels and average panel height greater than zero to calculate dowel bars.", icon=":material/warning:")
 
                     # 🔹 Número de dowels por panel
                     if dowel_spacing > 0 and dowel_bar_type:
@@ -1315,7 +1330,7 @@ def render_walls_tab():
             result = calculate_section_weight(
                 section, wall_area, wall_thickness,
                 apply_lap_splice, number_of_panels,
-                opening_area, number_of_openings
+                opening_area, number_of_openings, avg_panel_height
             )
             bars_weight_total += result["bars_total"]
             mesh_weight_total += result["mesh_total"]
@@ -1835,7 +1850,7 @@ def render_walls_tab():
             result = calculate_section_weight(
             section, wall_area, wall_thickness,
             apply_lap_splice, number_of_panels,
-            opening_area, number_of_openings
+            opening_area, number_of_openings, avg_panel_height
         )
         start_row += 1
         audit_sheet.write(f"A{start_row}", f"Section {i+1}")
@@ -1910,7 +1925,7 @@ def render_walls_tab():
 
 
 
-    if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0:
+    if wall_area > 0 and wall_thickness > 0 and number_of_panels > 0 and avg_panel_height > 0:
         show_results = st.toggle(":material/bar_chart: Show Details (results & cost breakdown)", value=False)
         show_cost_breakdown = show_results
 
@@ -2106,7 +2121,7 @@ def render_walls_tab():
         )
 
     else:
-            st.warning("Please enter wall area, thickness, and number of panels greater than zero to start calculations.", icon=":material/warning:")
+            st.warning("Please enter wall area, thickness, number of panels, and average panel height greater than zero to start calculations.", icon=":material/warning:")
 
 
 if st.session_state.estimate_type == "Walls":
