@@ -1735,6 +1735,63 @@ def render_walls_tab():
     elif extra_steel_kg > 0:
         reinforcement_desc = f"Additional Steel Reinforcement: {extra_steel_kg} kg"
 
+    _wall_section_rows = []
+    for _i, _sec in enumerate(detailed_sections_data):
+        _parts = []
+        if _sec["horizontal_bar"] and _sec["horizontal_spacing"] > 0:
+            _parts.append(f"H: {_sec['horizontal_bar']} @ {_sec['horizontal_spacing']}mm ({_sec['horizontal_placement']})")
+        if _sec["vertical_bar"] and _sec["vertical_spacing"] > 0:
+            _parts.append(f"V: {_sec['vertical_bar']} @ {_sec['vertical_spacing']}mm ({_sec['vertical_placement']})")
+        if _sec["mesh_reinforcement"] == "Yes" and _sec["mesh_type"]:
+            _parts.append(f"Mesh: {_sec['mesh_type']} ({_sec['mesh_placement']})")
+        if _sec["trimer_bar"]:
+            _parts.append(f"Trimer: {_sec['trimer_bar']} ({_sec['trimer_placement']})")
+        if _sec.get("u_bar_type") and _sec.get("u_bar_spacing", 0) > 0:
+            _parts.append(f"U-Bar: {_sec['u_bar_type']} @ {_sec['u_bar_spacing']}mm ({_sec['u_bar_location']})")
+        _wall_section_rows.append((f"Section {_i + 1}", ", ".join(_parts) if _parts else "Not configured"))
+
+    if dowels == "Yes":
+        if dowel_calculation_method == "Enter Manually":
+            _dowel_row = ("Dowels", f"Manual entry — {total_dowel_weight:.2f} kg total")
+        elif dowel_bar_type:
+            _dowel_row = ("Dowels", f"{dowel_bar_type} @ {dowel_spacing}mm — {total_dowel_weight:.2f} kg total")
+        else:
+            _dowel_row = ("Dowels", "Configured but incomplete")
+    else:
+        _dowel_row = ("Dowels", "Not included")
+
+    walls_audit_rows = [
+        (">>> GEOMETRY", ""),
+        ("Element Type", element_type or "N/A"),
+        ("Wall Area (m²)", wall_area), ("Wall Thickness (mm)", wall_thickness),
+        ("Number of Panels", number_of_panels), ("Concrete Type", concrete_type),
+        ("Average Panel Height (m)", avg_panel_height),
+
+        (">>> REINFORCEMENT", ""),
+        ("Apply Lap Splice", "Yes" if apply_lap_splice else "No"),
+        ("Reo Rate (kg/m³)", reo_rate if reo_rate > 0 else "Not used"),
+        ("Additional Steel Reinforcement (kg)", extra_steel_kg if extra_steel_kg > 0 else "Not used"),
+    ] + _wall_section_rows + [
+        _dowel_row,
+        ("Total Steel Weight (kg)", round(total_steel_weight, 2)),
+        ("Total Steel per m² (kg/m²)", round(total_steel_weight_m2, 2)),
+
+        (">>> WASTE FACTORS APPLIED", ""),
+        ("Waste % applied to", waste_summary),
+
+        (">>> UNIT RATES USED (from Cost Settings)", ""),
+        (f"Concrete — {concrete_type or 'n/a'} ($/m³)", cost_dict.get(concrete_type, 0)),
+        ("Concrete Testing ($/m³)", cost_dict.get("Concrete Testing", 0)),
+        ("Wages ($/m²)", cost_dict.get("Wages", 0)),
+        ("Shopdrawings ($/m²)", cost_dict.get("Shopdrawings", 0)),
+        ("Formwork ($/m²)", cost_dict.get("Formwork", 0)),
+        ("Patching ($/m²)", cost_dict.get("Patching", 0)),
+
+        (">>> RESULTS", ""),
+        ("Total Cost per m² ($) — PRIMARY", round(total_cost_per_m2, 2)),
+        ("Total Cost ($) — reference", round(total_cost_per_m2 * wall_area, 2)),
+    ]
+
     # 📦 Exportar el reporte a Excel con hoja de auditoría
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -1811,118 +1868,20 @@ def render_walls_tab():
         # --------- Hoja de Auditoría ----------
         audit_sheet = workbook.add_worksheet("Audit_Calculations")
         audit_sheet.write("A1", f"Element Type: {element_type}" if element_type else "Element Type: N/A", bold_format)
-        audit_sheet.write("A3", "PROJECT INPUTS", bold_format)
 
-        audit_data = [
-            ("Project Code", project_code if project_code else "N/A"),
-            ("Total Wall Area (m²)", wall_area),
-            ("Number of Panels", number_of_panels),
-            ("Wall Thickness (mm)", wall_thickness),
-            ("Openings Area (m²)", opening_area),
-            ("Number of Openings", number_of_openings),
-            ("Concrete Type", concrete_type),
-            ("Waste Steel (%)", waste_steel),
-            ("Waste Concrete (%)", waste_concrete),
-            ("Apply Lap Splice?", "Yes" if apply_lap_splice else "No"),
-        ]
-        for idx, (label, val) in enumerate(audit_data, start=5):
-            audit_sheet.write(f"A{idx}", label)
-            audit_sheet.write(f"B{idx}", val)
-
-        # 🔹 Sección de Reforzamiento Total
-        start_row = idx + 2
-        audit_sheet.write(f"A{start_row}", "REINFORCEMENT SUMMARY", bold_format)
-        start_row += 1
-        audit_sheet.write(f"A{start_row}", "Total Steel Weight (kg)")
-        audit_sheet.write(f"B{start_row}", total_steel_weight)
-        start_row += 1
-        audit_sheet.write(f"A{start_row}", "Total Steel per m² (kg/m²)")
-        audit_sheet.write(f"B{start_row}", total_steel_weight_m2)
-
-        # 🔹 Detalle por sección de refuerzo
-        start_row += 2
-        audit_sheet.write(f"A{start_row}", "DETAILED SECTIONS", bold_format)
-        start_row += 1
-        audit_sheet.write(f"A{start_row}", "Section")
-        audit_sheet.write(f"B{start_row}", "Bars (kg)")
-        audit_sheet.write(f"C{start_row}", "Mesh (kg)")
-        audit_sheet.write(f"D{start_row}", "Trimer Bar (kg)")
-        audit_sheet.write(f"E{start_row}", "U-Bar (kg)")
-
-        for i, section in enumerate(detailed_sections_data):
-            result = calculate_section_weight(
-            section, wall_area, wall_thickness,
-            apply_lap_splice, number_of_panels,
-            opening_area, number_of_openings, avg_panel_height
-        )
-        start_row += 1
-        audit_sheet.write(f"A{start_row}", f"Section {i+1}")
-        audit_sheet.write(f"B{start_row}", result["bars_total"])
-        audit_sheet.write(f"C{start_row}", result["mesh_total"])
-        audit_sheet.write(f"D{start_row}", result["trimer_total"])
-        audit_sheet.write(f"E{start_row}", result["u_bar_total"])
-
-        # 🔹 Refuerzo Adicional y Reo Rate
-        start_row += 2
-        audit_sheet.write(f"A{start_row}", "Additional Steel (kg)")
-        audit_sheet.write(f"B{start_row}", extra_steel_kg)
-        start_row += 1
-        audit_sheet.write(f"A{start_row}", "Reo Rate (kg)")
-        audit_sheet.write(f"B{start_row}", reo_rate_kg_total)
-
-        # 🔹 COST SUMMARY PER COMPONENT (usando cantidades reales)
-        start_row += 1  # 🔹 Añade una fila vacía para separación visual
-        audit_sheet.write(start_row, 0, "COST SUMMARY PER COMPONENT", header_format)
-        start_row += 2
-        headers = ["Component", "Quantity", "Unit", "Unit Price", "Total Cost"]
-        for col_num, header in enumerate(headers):
-            audit_sheet.write(start_row, col_num, header, header_format)
-        start_row += 1
-
-        summary_total = 0.0
-
-        # ✅ CORREGIDO (Bug 4): ya NO se redefine cost_mapping aquí. Se reutiliza
-        # el mismo diccionario y la misma función resolve_unit_cost() definidos
-        # arriba (antes de construir df_costs), para que la tabla en pantalla y
-        # esta hoja de auditoría del Excel usen siempre la misma fuente de verdad.
-        for item in df_costs["Item"]:
-            if item == "Total Cost":
-                continue
-
-            unit = units.get(item, "")
-            unit_price = resolve_unit_cost(item)
-
-            # Definir ítems fijos por m² (no multiplicar)
-            fixed_m2_items = ["Wages", "Shopdrawings", "Formwork", "Patching", "EO - Special FW"]
-
-            if item in eo_costs:
-                qty_total = wall_area  # EO siempre por m²
-            elif item in fixed_m2_items:
-                qty_total = wall_area
-            elif unit == "m":
-                qty_total = ripbox * (1 + waste_ripbox / 100)
+        _subsection_fmt = workbook.add_format({"bold": True, "bg_color": "#E4E1D9"})
+        _r_audit = 2
+        for _label, _value in walls_audit_rows:
+            if _label.startswith(">>> "):
+                audit_sheet.write(_r_audit, 0, _label.replace(">>> ", ""), _subsection_fmt)
+                audit_sheet.write(_r_audit, 1, "", _subsection_fmt)
             else:
-                qty_total = quantities.get(item, 0) * wall_area  # Escalar por área
+                audit_sheet.write(_r_audit, 0, _label)
+                audit_sheet.write(_r_audit, 1, str(_value))
+            _r_audit += 1
 
-            total_cost_item = qty_total * unit_price
-            summary_total += total_cost_item
-
-            audit_sheet.write(start_row, 0, item, border_format)
-            audit_sheet.write(start_row, 1, qty_total, border_format)
-            audit_sheet.write(start_row, 2, unit, border_format)
-            audit_sheet.write(start_row, 3, unit_price, money_format)  # <-- ESTE FORMATO AGREGA $
-            audit_sheet.write(start_row, 4, total_cost_item, money_format)
-            start_row += 1
-
-
-
-
-        # 🔸 Fila Total Cost con formato uniforme (sin salto ni ruptura visual)
-        audit_sheet.write(start_row, 0, "Total Cost", total_row_format)
-        audit_sheet.write(start_row, 1, "", total_row_format)
-        audit_sheet.write(start_row, 2, "", total_row_format)
-        audit_sheet.write(start_row, 3, "", total_row_format)
-        audit_sheet.write(start_row, 4, summary_total, total_format)
+        audit_sheet.set_column("A:A", 40)
+        audit_sheet.set_column("B:B", 24)
 
 
 
@@ -2052,61 +2011,6 @@ def render_walls_tab():
             </div>
         """, unsafe_allow_html=True)
 
-        _wall_section_rows = []
-        for _i, _sec in enumerate(detailed_sections_data):
-            _parts = []
-            if _sec["horizontal_bar"] and _sec["horizontal_spacing"] > 0:
-                _parts.append(f"H: {_sec['horizontal_bar']} @ {_sec['horizontal_spacing']}mm ({_sec['horizontal_placement']})")
-            if _sec["vertical_bar"] and _sec["vertical_spacing"] > 0:
-                _parts.append(f"V: {_sec['vertical_bar']} @ {_sec['vertical_spacing']}mm ({_sec['vertical_placement']})")
-            if _sec["mesh_reinforcement"] == "Yes" and _sec["mesh_type"]:
-                _parts.append(f"Mesh: {_sec['mesh_type']} ({_sec['mesh_placement']})")
-            if _sec["trimer_bar"]:
-                _parts.append(f"Trimer: {_sec['trimer_bar']} ({_sec['trimer_placement']})")
-            if _sec.get("u_bar_type") and _sec.get("u_bar_spacing", 0) > 0:
-                _parts.append(f"U-Bar: {_sec['u_bar_type']} @ {_sec['u_bar_spacing']}mm ({_sec['u_bar_location']})")
-            _wall_section_rows.append((f"Section {_i + 1}", ", ".join(_parts) if _parts else "Not configured"))
-
-        if dowels == "Yes":
-            if dowel_calculation_method == "Enter Manually":
-                _dowel_row = ("Dowels", f"Manual entry — {total_dowel_weight:.2f} kg total")
-            elif dowel_bar_type:
-                _dowel_row = ("Dowels", f"{dowel_bar_type} @ {dowel_spacing}mm — {total_dowel_weight:.2f} kg total")
-            else:
-                _dowel_row = ("Dowels", "Configured but incomplete")
-        else:
-            _dowel_row = ("Dowels", "Not included")
-
-        walls_audit_rows = [
-            (">>> GEOMETRY", ""),
-            ("Element Type", element_type or "N/A"),
-            ("Wall Area (m²)", wall_area), ("Wall Thickness (mm)", wall_thickness),
-            ("Number of Panels", number_of_panels), ("Concrete Type", concrete_type),
-
-            (">>> REINFORCEMENT", ""),
-            ("Apply Lap Splice", "Yes" if apply_lap_splice else "No"),
-            ("Reo Rate (kg/m³)", reo_rate if reo_rate > 0 else "Not used"),
-            ("Additional Steel Reinforcement (kg)", extra_steel_kg if extra_steel_kg > 0 else "Not used"),
-        ] + _wall_section_rows + [
-            _dowel_row,
-            ("Total Steel Weight (kg)", round(total_steel_weight, 2)),
-            ("Total Steel per m² (kg/m²)", round(total_steel_weight_m2, 2)),
-
-            (">>> WASTE FACTORS APPLIED", ""),
-            ("Waste % applied to", waste_summary),
-
-            (">>> UNIT RATES USED (from Cost Settings)", ""),
-            (f"Concrete — {concrete_type or 'n/a'} ($/m³)", cost_dict.get(concrete_type, 0)),
-            ("Concrete Testing ($/m³)", cost_dict.get("Concrete Testing", 0)),
-            ("Wages ($/m²)", cost_dict.get("Wages", 0)),
-            ("Shopdrawings ($/m²)", cost_dict.get("Shopdrawings", 0)),
-            ("Formwork ($/m²)", cost_dict.get("Formwork", 0)),
-            ("Patching ($/m²)", cost_dict.get("Patching", 0)),
-
-            (">>> RESULTS", ""),
-            ("Total Cost per m² ($) — PRIMARY", round(total_cost_per_m2, 2)),
-            ("Total Cost ($) — reference", round(total_cost_per_m2 * wall_area, 2)),
-        ]
 
         if st.button("➕ Add to Project Summary", key="walls_add_to_summary_btn"):
             add_to_project_summary("Walls", element_type, "m²", total_cost_per_m2, total_cost_per_m2 * wall_area,
