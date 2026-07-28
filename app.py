@@ -1097,7 +1097,7 @@ def render_walls_tab():
     with sub_geom:
         # Panel Dimensions
         with st.expander("Panel Dimensions", icon=":material/straighten:", expanded=True):
-            col1, col2, col3, col4, col5 = st.columns(5)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 number_of_panels = st.number_input(
                     "Number of Panels",
@@ -1122,14 +1122,9 @@ def render_walls_tab():
                     step=10,
                     key="wall_thickness_input",
                 )
+
+            col4, col5 = st.columns(2)
             with col4:
-                concrete_type = st.selectbox(
-                    "Concrete Type",
-                    concrete_options,
-                    index=0,
-                    key="concrete_type_select",
-                )
-            with col5:
                 avg_panel_height = float_input(
                     "Average Panel Height (m)",
                     key="avg_panel_height_input_text",
@@ -1139,6 +1134,13 @@ def render_walls_tab():
                 )
                 if avg_panel_height == 0:
                     st.caption(":material/warning: Required — average height across panels.")
+            with col5:
+                concrete_type = st.selectbox(
+                    "Concrete Type",
+                    concrete_options,
+                    index=0,
+                    key="concrete_type_select",
+                )
 
         with st.expander("Openings", icon=":material/window:"):
             has_openings = st.radio("Do the panels have openings?", ["No", "Yes"], index=0)
