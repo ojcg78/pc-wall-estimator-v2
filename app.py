@@ -618,7 +618,7 @@ logo_base64 = image_to_base64("concrete")
 st.markdown(f"""
 <div class="pw-header">
     <div class="pw-header-left">
-        <img src='data:image/png;base64,{logo_base64}' width='58' style='border-radius:12px; border:1px solid var(--pw-border); box-shadow: var(--pw-shadow-sm);'/>
+        <img src='data:image/png;base64,{logo_base64}' width='58' style='border-radius:10px;'/>
         <div>
             <p class="pw-header-title">Precast Elements Estimator</p>
             <p class="pw-header-subtitle">Cost estimation for precast concrete elements fabrication</p>
