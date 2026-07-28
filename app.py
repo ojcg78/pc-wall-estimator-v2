@@ -980,7 +980,8 @@ def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_s
     if not u_bar_type or num_panels == 0 or u_bar_spacing <= 0 or u_bar_leg_length <= 0 or avg_panel_height <= 0:
         return 0, 0
     # CORREGIDO: mismo ajuste que Trimer Bar — área÷paneles÷altura, no área÷paneles directo.
-    avg_width = min(4.2, (area / num_panels) / avg_panel_height) if num_panels > 0 else 0
+    # Sin tope de 4.2m: los paneles reales pueden ser más largos, un tope fijo subestimaría.
+    avg_width = ((area / num_panels) / avg_panel_height) if num_panels > 0 else 0
     bars_per_panel = avg_width / (u_bar_spacing / 1000)
     bars_per_panel = int(bars_per_panel) + (1 if bars_per_panel % 1 > 0 else 0)
     total_bars = bars_per_panel * num_panels
@@ -1253,9 +1254,11 @@ def render_walls_tab():
                         dowel_length = 0.0
                         st.warning("Please select a valid Dowel Bar Type to calculate length.", icon=":material/warning:")
 
-                    # 🔹 Ancho promedio del panel (área÷paneles÷altura, respetando límite de 4.2 m)
+                    # 🔹 Largo promedio del panel (área÷paneles÷altura). Sin tope artificial:
+                    # los paneles reales de este proyecto pueden llegar a 10-12 m de largo,
+                    # así que un tope fijo subestimaría la cantidad de barras.
                     if number_of_panels > 0 and avg_panel_height > 0:
-                        avg_panel_width = min(4.2, (wall_area / number_of_panels) / avg_panel_height)
+                        avg_panel_width = (wall_area / number_of_panels) / avg_panel_height
                     else:
                         avg_panel_width = 0
                         st.warning("Please enter number of panels and average panel height greater than zero to calculate dowel bars.", icon=":material/warning:")
