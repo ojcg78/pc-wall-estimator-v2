@@ -487,7 +487,7 @@ def detailed_reinforcement_section(index, steel_weight_lookup, mesh_weight_looku
     )
     u_bar_location = st.radio(
         f"U-Bar Location {index + 1}",
-        ["Bottom", "Top"],
+        ["Bottom", "Top", "Side"],
         key=f"ubar_location_{index}"
     )
     u_bar_manual_length = st.checkbox(
@@ -976,13 +976,20 @@ def calculate_trimer_bar_weight(area, num_panels, wall_thickness, trimer_type, p
 
 
 
-def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_spacing, u_bar_leg_length, avg_panel_height=0):
+def calculate_u_bar_weight(area, num_panels, wall_thickness, u_bar_type, u_bar_spacing, u_bar_leg_length, avg_panel_height=0, u_bar_location="Bottom"):
     if not u_bar_type or num_panels == 0 or u_bar_spacing <= 0 or u_bar_leg_length <= 0 or avg_panel_height <= 0:
         return 0, 0
     # CORREGIDO: mismo ajuste que Trimer Bar — área÷paneles÷altura, no área÷paneles directo.
     # Sin tope de 4.2m: los paneles reales pueden ser más largos, un tope fijo subestimaría.
-    avg_width = ((area / num_panels) / avg_panel_height) if num_panels > 0 else 0
-    bars_per_panel = avg_width / (u_bar_spacing / 1000)
+    # NUEVO: Bottom/Top espacian a lo largo del ANCHO del panel; Side espacia a lo
+    # largo de la ALTURA (la pata siempre penetra perpendicular al borde, eso no cambia).
+    # "Side" representa UN costado a la vez (igual que Bottom/Top representan un solo
+    # borde) — para ambos costados, se agregan dos secciones, cada una con "Side".
+    if u_bar_location == "Side":
+        avg_span = avg_panel_height
+    else:
+        avg_span = ((area / num_panels) / avg_panel_height) if num_panels > 0 else 0
+    bars_per_panel = avg_span / (u_bar_spacing / 1000)
     bars_per_panel = int(bars_per_panel) + (1 if bars_per_panel % 1 > 0 else 0)
     total_bars = bars_per_panel * num_panels
     short_leg = wall_thickness / 1000
@@ -1017,7 +1024,8 @@ def calculate_section_weight(section, area, wall_thickness, apply_lap, num_panel
 
     u_bar_m2, u_bar_weight_total = calculate_u_bar_weight(
         area, num_panels, wall_thickness,
-        section["u_bar_type"], section["u_bar_spacing"], section["u_bar_leg_length"], avg_panel_height
+        section["u_bar_type"], section["u_bar_spacing"], section["u_bar_leg_length"], avg_panel_height,
+        section["u_bar_location"]
     )
 
     return {
