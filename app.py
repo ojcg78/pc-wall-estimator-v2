@@ -1382,7 +1382,6 @@ def render_walls_tab():
                     waste_percentages[label] = st.number_input(
                         f"Waste % for {label}",
                         min_value=0.0,
-                        value=0.0,
                         step=0.1,
                         key=f"waste_{label.replace(' ', '_')}"
                     )
