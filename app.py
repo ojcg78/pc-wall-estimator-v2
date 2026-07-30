@@ -1355,8 +1355,26 @@ def render_walls_tab():
                 "Trimer Bar": trimer_bar_total,
                 "U-Bar": u_bar_total,
                 "Mesh": mesh_weight_total,
+                "Reo Rate": reo_rate_kg_total,
                 "Ripbox": ripbox
             }
+
+            # NUEVO: aplicar un mismo % a todos los ítems de refuerzo de una vez,
+            # sin perder la posibilidad de ajustar cada uno por separado después.
+            _apply_all_col1, _apply_all_col2 = st.columns([3, 1])
+            with _apply_all_col1:
+                waste_apply_all_pct = st.number_input(
+                    "Apply this % to all reinforcement items below",
+                    min_value=0.0, value=0.0, step=0.1,
+                    key="waste_apply_all_pct"
+                )
+            with _apply_all_col2:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("Apply to all", key="waste_apply_all_btn"):
+                    for _label, _qty in waste_items.items():
+                        if _qty > 0:
+                            st.session_state[f"waste_{_label.replace(' ', '_')}"] = waste_apply_all_pct
+                    st.rerun()
 
             waste_percentages = {}
             for label, qty in waste_items.items():
@@ -1374,6 +1392,7 @@ def render_walls_tab():
             waste_trimmer = waste_percentages.get("Trimer Bar", 0.0)
             waste_u_bar = waste_percentages.get("U-Bar", 0.0)
             waste_mesh = waste_percentages.get("Mesh", 0.0)
+            waste_reo_rate = waste_percentages.get("Reo Rate", 0.0)
             waste_ripbox = waste_percentages.get("Ripbox", 0.0)
 
         with st.expander("EO Items (Optional)", icon=":material/add_circle:", expanded=False):
@@ -1436,7 +1455,8 @@ def render_walls_tab():
         waste_applied = [
             label for label, val in [
                 ("Concrete", waste_concrete), ("Steel", waste_steel),
-                ("Trimer Bar", waste_trimmer), ("Mesh", waste_mesh), ("Ripbox", waste_ripbox)
+                ("Trimer Bar", waste_trimmer), ("U-Bar", waste_u_bar),
+                ("Mesh", waste_mesh), ("Reo Rate", waste_reo_rate), ("Ripbox", waste_ripbox)
             ] if val and val > 0
         ]
         waste_summary = ", ".join(waste_applied) if waste_applied else "None applied"
@@ -1488,7 +1508,7 @@ def render_walls_tab():
     # waste_ripbox) ya se capturaron más arriba, en el expander "Waste Factors"
     # (ubicado después de Additional Elements, antes de EO Items).
     total_steel_weight = (
-        reo_rate_kg_total * (1 + waste_steel / 100) +
+        reo_rate_kg_total * (1 + waste_reo_rate / 100) +
         bars_weight_total * (1 + waste_steel / 100) +
         mesh_weight_total * (1 + waste_mesh / 100) +
         trimer_bar_total * (1 + waste_trimmer / 100) +
@@ -1547,7 +1567,7 @@ def render_walls_tab():
         "Trimer Bar": (trimer_bar_m2 * (1 + waste_trimmer / 100) * cost_dict.get("Steel Bars", 0)),
         "U-Bar": (u_bar_m2 * (1 + waste_u_bar / 100) * cost_dict.get("Steel Bars", 0)),
         "Mesh": mesh_cost_per_m2 * (1 + waste_mesh / 100),
-        "Reo Rate": (reo_rate * (wall_thickness / 1000)) * cost_dict.get("Steel Bars", 0),
+        "Reo Rate": (reo_rate * (wall_thickness / 1000)) * (1 + waste_reo_rate / 100) * cost_dict.get("Steel Bars", 0),
         "Additional Reinforcement": (extra_steel_kg * cost_dict.get("Steel Bars", 0)) / wall_area if wall_area > 0 else 0,
 
         # 🔹 Otros elementos
@@ -1628,7 +1648,7 @@ def render_walls_tab():
         "Trimer Bar": trimer_bar_m2 * (1 + waste_trimmer / 100),
         "U-Bar": u_bar_m2 * (1 + waste_u_bar / 100),
         "Mesh": mesh_weight_m2 * (1 + waste_mesh / 100),
-        "Reo Rate": reo_rate_m2,
+        "Reo Rate": reo_rate_m2 * (1 + waste_reo_rate / 100),
         "Additional Reinforcement": extra_steel_kg_m2,
         "Dowel Bars": total_dowel_weight / wall_area if wall_area > 0 else 0,
         "Ripbox": (ripbox / wall_area if wall_area > 0 else 0) * (1 + waste_ripbox / 100),
