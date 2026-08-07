@@ -297,7 +297,10 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_long_weight_2 = col_long_length_2 * steel_weight_lookup.get(col_long_bar2, 0)
 
     col_tie_spacing_m = col_tie_spacing_mm / 1000
-    col_tie_count = int(-(-col_avg_height // col_tie_spacing_m)) if col_tie_spacing_m > 0 and col_avg_height > 0 else 0
+    # CORREGIDO: se suma +1 al número de intervalos (ceil) para reflejar un
+    # tie en cada extremo de la columna (base y coronación), no solo uno por
+    # intervalo — es la convención estándar de detallado estructural.
+    col_tie_count = (int(-(-col_avg_height // col_tie_spacing_m)) + 1) if col_tie_spacing_m > 0 and col_avg_height > 0 else 0
     if col_tie_perimeter_override > 0:
         col_tie_perimeter = col_tie_perimeter_override
     else:
