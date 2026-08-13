@@ -228,9 +228,48 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 st.markdown("###### Ligs")
                 c4, c5 = st.columns(2)
                 with c4:
-                    col_lig_qty = st.number_input("Number of Ligs per Tie Level", min_value=0, value=0, step=1, key="col_lig_qty")
+                    col_lig_qty = st.number_input(
+                        "Number of Ligs per Tie Level",
+                        min_value=0, value=0, step=1, key="col_lig_qty",
+                        help="Crossties assumed to cross the SHORTER face (most common case)."
+                    )
+                    col_lig_qty_other = st.number_input(
+                        "Ligs crossing the other way (optional)",
+                        min_value=0, value=0, step=1, key="col_lig_qty_other",
+                        help=(
+                            "Only fill this in if some crossties run across the LONGER face "
+                            "instead of the shorter one (e.g. 3 cross the short face, 1 crosses "
+                            "the long face). Leave at 0 if all your crossties run the same way, "
+                            "which covers most cases."
+                        )
+                    )
                 with c5:
                     col_lig_bar = st.selectbox("Lig Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_lig_bar")
+
+                st.markdown("###### Additional closed ties (optional)")
+                c6, c7 = st.columns(2)
+                with c6:
+                    col_extra_closed_tie_qty = st.number_input(
+                        "Additional closed ties per level", min_value=0, value=0, step=1,
+                        key="col_extra_closed_tie_qty",
+                        help=(
+                            "Only for configurations with a second concentric closed tie "
+                            "(not just open crossties) — common once a column has enough "
+                            "bars to need one, e.g. Type C/D/F style details. Uses the Lig "
+                            "Bar Type selected above."
+                        )
+                    )
+                with c7:
+                    col_extra_closed_tie_perimeter_mm = st.number_input(
+                        "Perimeter of each additional closed tie (mm)", min_value=0.0, value=0.0,
+                        key="col_extra_closed_tie_perimeter_mm",
+                        help=(
+                            "Measure this directly off the cross-section drawing — it depends "
+                            "on exactly which bars that inner tie wraps around, which isn't "
+                            "something the app can work out on its own."
+                        )
+                    )
+                col_extra_closed_tie_perimeter_m = col_extra_closed_tie_perimeter_mm / 1000
         else:
             # General Reo Rate mode — bar-level detail isn't needed for costing,
             # so these stay at safe defaults (0 / blank) for the calculations below.
@@ -239,7 +278,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             col_apply_lap = True
             col_tie_bar, col_tie_spacing_mm, col_tie_perimeter_override_mm = "", 0, 0
             col_tie_perimeter_override = 0.0
-            col_lig_qty, col_lig_bar = 0, ""
+            col_lig_qty, col_lig_qty_other, col_lig_bar = 0, 0, ""
+            col_extra_closed_tie_qty, col_extra_closed_tie_perimeter_m = 0, 0.0
 
         with st.expander("Dowels", icon=":material/link:", expanded=True):
             col_dowel_mode = st.radio(
@@ -323,7 +363,15 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     # las barras de las caras más largas cruzando el lado corto) — antes usaba
     # siempre col_width, lo cual daba un largo/peso incorrecto si col_depth < col_width.
     col_lig_length = ((min(col_width, col_depth) - 2 * col_cover) + _col_hook_allowance_m(col_lig_bar)) * (col_tie_count * col_lig_qty)
-    col_lig_weight = col_lig_length * steel_weight_lookup.get(col_lig_bar, 0)
+    # Ligs crossing the LONGER face instead (uncommon, but real — e.g. Type C style
+    # details where most crossties go one way and one goes the other).
+    col_lig_length_other = ((max(col_width, col_depth) - 2 * col_cover) + _col_hook_allowance_m(col_lig_bar)) * (col_tie_count * col_lig_qty_other)
+    # Una segunda tie cerrada (no una pata abierta) — su perímetro depende de qué
+    # barras abraza exactamente, algo que la app no puede derivar sola, así que es
+    # una medición directa en vez de calcularse desde width/depth como la tie principal.
+    col_extra_closed_tie_length = col_extra_closed_tie_perimeter_m * col_tie_count * col_extra_closed_tie_qty
+    col_extra_closed_tie_weight = col_extra_closed_tie_length * steel_weight_lookup.get(col_lig_bar, 0)
+    col_lig_weight = (col_lig_length + col_lig_length_other) * steel_weight_lookup.get(col_lig_bar, 0) + col_extra_closed_tie_weight
 
 
     col_reo_weight_from_bars = col_long_weight_1 + col_long_weight_2 + col_tie_weight + col_lig_weight
