@@ -905,11 +905,16 @@ def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, p
     total_length_per_m2_v = 0
     total_weight_m2 = 0
 
+    # CORREGIDO: cada barra debe usar SU PROPIO espaciamiento (el que el usuario
+    # carga junto a esa barra en la UI: "Horizontal bar" + "Horizontal spacing" van
+    # juntos), no el de la otra dirección. Antes estaban cruzados: las barras
+    # horizontales usaban el espaciamiento vertical y viceversa, lo cual daba un
+    # peso incorrecto salvo que ambos espaciamientos coincidieran por casualidad.
     if bar_type_h:
         diameter_h = bar_diameter_lookup[bar_type_h]
         lap_factor_h = 1 + (40 * diameter_h / 6000) if apply_lap else 1
         factor_placement_h = 2 if placement_h == "EF" else 1
-        bars_per_meter_h = 1 / spacing_v if spacing_v > 0 else 0  # Espaciamiento vertical
+        bars_per_meter_h = 1 / spacing_h if spacing_h > 0 else 0  # Espaciamiento propio (horizontal)
         total_length_per_m2_h = bars_per_meter_h * lap_factor_h * factor_placement_h
         total_weight_m2 += total_length_per_m2_h * steel_weight_lookup[bar_type_h]
 
@@ -917,7 +922,7 @@ def calculate_rebar_weight(area, spacing_h, spacing_v, bar_type_h, bar_type_v, p
         diameter_v = bar_diameter_lookup[bar_type_v]
         lap_factor_v = 1 + (40 * diameter_v / 6000) if apply_lap else 1
         factor_placement_v = 2 if placement_v == "EF" else 1
-        bars_per_meter_v = 1 / spacing_h if spacing_h > 0 else 0  # Espaciamiento horizontal
+        bars_per_meter_v = 1 / spacing_v if spacing_v > 0 else 0  # Espaciamiento propio (vertical)
         total_length_per_m2_v = bars_per_meter_v * lap_factor_v * factor_placement_v
         total_weight_m2 += total_length_per_m2_v * steel_weight_lookup[bar_type_v]
 
