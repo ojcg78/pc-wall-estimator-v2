@@ -290,6 +290,17 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         lap_length = (40 * diameter / 1000) if apply_lap else 0.0
         return qty * (base_length + lap_length)
 
+    def _col_hook_allowance_m(bar_type):
+        # Practical estimating allowance for a closed tie/lig's hook length: 6x the
+        # bar's own diameter per hook end (135° hook), or 75mm minimum per end,
+        # whichever is larger — x2 because a closed loop has two hook ends. Scales
+        # with whichever bar is actually selected (tie bar and lig bar can differ),
+        # instead of a flat constant.
+        diameter = bar_diameter_lookup.get(bar_type, 0)
+        if diameter <= 0:
+            return 0.14  # no bar selected yet — fall back to the old flat estimate
+        return (2 * max(6 * diameter, 75)) / 1000
+
     col_long_length_1 = _col_bar_length_with_lap(col_long_qty, col_avg_height, col_long_bar, col_apply_lap)
     col_long_weight_1 = col_long_length_1 * steel_weight_lookup.get(col_long_bar, 0)
 
@@ -304,12 +315,16 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     if col_tie_perimeter_override > 0:
         col_tie_perimeter = col_tie_perimeter_override
     else:
-        col_tie_perimeter = 2 * ((col_width - 2 * col_cover) + (col_depth - 2 * col_cover)) + 0.14  # 0.14 = 2 x 7cm hooks
+        col_tie_perimeter = 2 * ((col_width - 2 * col_cover) + (col_depth - 2 * col_cover)) + _col_hook_allowance_m(col_tie_bar)
     col_tie_length = col_tie_perimeter * col_tie_count
     col_tie_weight = col_tie_length * steel_weight_lookup.get(col_tie_bar, 0)
 
-    col_lig_length = ((col_width - 2 * col_cover) + 0.14) * (col_tie_count * col_lig_qty)
+    # CORREGIDO: los ligs atraviesan la dimensión MENOR de la sección (conectan
+    # las barras de las caras más largas cruzando el lado corto) — antes usaba
+    # siempre col_width, lo cual daba un largo/peso incorrecto si col_depth < col_width.
+    col_lig_length = ((min(col_width, col_depth) - 2 * col_cover) + _col_hook_allowance_m(col_lig_bar)) * (col_tie_count * col_lig_qty)
     col_lig_weight = col_lig_length * steel_weight_lookup.get(col_lig_bar, 0)
+
 
     col_reo_weight_from_bars = col_long_weight_1 + col_long_weight_2 + col_tie_weight + col_lig_weight
     col_reo_rate_estimated = safe_div(col_reo_weight_from_bars, col_volume_per_column)
