@@ -1198,6 +1198,7 @@ def render_walls_tab():
             st.markdown("### :material/inventory_2: Steel Weight per Section")
             total_section_weight = 0
             for i, section in enumerate(detailed_sections_data):
+                st.write(f"DEBUG sección {i}:", section)
                 result = calculate_section_weight(
                     section, wall_area, wall_thickness,
                     apply_lap_splice, number_of_panels,
