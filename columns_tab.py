@@ -281,44 +281,152 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             col_lig_qty, col_lig_qty_other, col_lig_bar = 0, 0, ""
             col_extra_closed_tie_qty, col_extra_closed_tie_perimeter_m = 0, 0.0
 
+        # Column-to-column dowels only (footing connections get sleeves, no dowels).
+        # Priced as extra kg at the Steel Bars $/kg rate, which already covers
+        # sleeves, templates etc.
         with st.expander("Dowels", icon=":material/link:", expanded=True):
             col_dowel_mode = st.radio(
                 "Dowel information",
-                ["Exclude", "Estimate (1 per longitudinal bar)", "I know the details"],
+                ["Exclude", "Estimate (match longitudinal bars)", "I know the details"],
                 index=0,
                 key="col_dowel_mode",
                 help=(
-                    "Exclude — use only if the drawing confirms dowels don't apply. "
-                    "Estimate assumes one dowel per longitudinal bar (only available "
-                    "when Steel Costing Method is Bar Detail, since that's the only way "
-                    "the longitudinal bar count is known). "
-                    "I know the details lets the real quantity be entered."
+                    "Column-to-column connections only. Exclude = no dowels (e.g. footing "
+                    "connections, where only sleeves are supplied). Estimate = one dowel per "
+                    "longitudinal bar, same size. I know the details = enter bars from the "
+                    "drawings, or the total kg from the steel schedule. Dowels are priced as "
+                    "extra kg at the Steel Bars rate (sleeves, templates etc. are covered by that rate)."
                 ),
             )
 
+            col_bar_options = [""] + list(steel_weight_lookup.keys())
+            col_is_bar_detail = col_steel_mode == "Bar Detail (configure below)"
+            col_dowel_use_total_kg = False
+            col_dowel_total_kg = 0.0
+            col_dowel_sets = 1.0
+            col_dowel_length_override_mm = 0
+            col_dowel_groups = []
+            col_dowel_missing_bar = []
+
             if col_dowel_mode == "Exclude":
                 st.caption("Dowels are excluded from this cost estimate.")
-                col_dowel_bar = ""
-                col_dowel_qty_manual = 0
-                col_dowel_length_override_mm = 0
             else:
-                c1, c2 = st.columns(2)
-                with c1:
-                    col_dowel_bar = st.selectbox("Dowel Bar Type", [""] + list(steel_weight_lookup.keys()), key="col_dowel_bar")
-                with c2:
-                    if col_dowel_mode == "I know the details":
-                        col_dowel_qty_manual = st.number_input(
-                            "Dowels per Column", min_value=0, value=0, step=1, key="col_dowel_qty_manual"
+                if col_dowel_mode == "I know the details":
+                    col_dowel_use_total_kg = st.radio(
+                        "Enter details as",
+                        ["Bars (qty x size x length)", "Total weight per column (kg)"],
+                        index=0, key="col_dowel_manual_input", horizontal=True,
+                    ) == "Total weight per column (kg)"
+
+                col_estimate_from_bars = col_dowel_mode == "Estimate (match longitudinal bars)" and col_is_bar_detail
+
+                if col_dowel_use_total_kg:
+                    col_dowel_total_kg = st.number_input(
+                        "Total dowel weight per column (kg)", min_value=0.0, value=0.0, step=0.1,
+                        key="col_dowel_total_kg",
+                        help=(
+                            "From the steel schedule: total dowel kg for the group ÷ number of "
+                            "columns. Entered as-is — the sets-per-column factor is not applied."
+                        ),
+                    )
+                elif col_estimate_from_bars:
+                    col_dowel_groups = [(col_long_qty, col_long_bar), (col_long_qty2, col_long_bar2)]
+                else:
+                    if col_dowel_mode == "Estimate (match longitudinal bars)":
+                        st.caption("General Reo Rate in use — enter the assumed dowel qty and size per set.")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        col_dowel_qty_1 = st.number_input("Qty per set (Group 1)", min_value=0, value=0, step=1, key="col_dowel_qty_manual")
+                        col_dowel_qty_2 = st.number_input("Qty per set (Group 2, optional)", min_value=0, value=0, step=1, key="col_dowel_qty_manual2")
+                    with c2:
+                        col_dowel_bar_1 = st.selectbox("Dowel Bar (Group 1)", col_bar_options, key="col_dowel_bar")
+                        col_dowel_bar_2 = st.selectbox("Dowel Bar (Group 2)", col_bar_options, key="col_dowel_bar2")
+                    col_dowel_groups = [(col_dowel_qty_1, col_dowel_bar_1), (col_dowel_qty_2, col_dowel_bar_2)]
+                    # A qty entered without a dowel bar can't be weighed.
+                    col_dowel_missing_bar = [
+                        name for name, (qty, bar) in zip(["Group 1", "Group 2"], col_dowel_groups) if qty > 0 and not bar
+                    ]
+
+                if not col_dowel_use_total_kg:
+                    c3, c4 = st.columns(2)
+                    with c3:
+                        col_dowel_sets = st.number_input(
+                            "Dowel sets per column (avg)", min_value=0.0, value=1.0, step=0.01,
+                            key="col_dowel_sets",
+                            help=(
+                                "1 = every column in the group has one set of dowels. Use a decimal "
+                                "when only some do, e.g. 0.67 if the top-storey columns (1 in 3) have "
+                                "none. The dowel weight per column is multiplied by this."
+                            ),
                         )
-                    else:
-                        col_dowel_qty_manual = 0
-                        st.caption("Quantity = number of longitudinal bars (set in Steel Costing Method / Longitudinal Reinforcement).")
-                col_dowel_length_override_mm = st.number_input(
-                    "Dowel Length Override (mm)", min_value=0, value=0, step=1, key="col_dowel_len_mm"
-                )
-                st.caption("Leave the length override at 0 to calculate it automatically as 2 x 40 x bar diameter + 20mm.")
+                    with c4:
+                        col_dowel_length_override_mm = st.number_input(
+                            "Dowel Length Override (mm)", min_value=0, value=0, step=1, key="col_dowel_len_mm",
+                            help="Use the shop-drawing length once known (e.g. after award).",
+                        )
+                    st.caption(
+                        "Leave the length override at 0 to calculate it automatically as 2 x 40 x bar "
+                        "diameter + 20mm (40d anchored in the lower column, 40d grouted into the upper "
+                        "column's metal duct, 20mm joint)."
+                    )
 
             col_dowel_length_override = col_dowel_length_override_mm / 1000
+
+            # Dowel weight — each bar group weighed with its own size.
+            def _col_dowel_length(bar_type):
+                if col_dowel_length_override > 0:
+                    return col_dowel_length_override
+                diameter = bar_diameter_lookup.get(bar_type, 0)
+                return (2 * 40 * diameter) / 1000 + 0.02 if diameter > 0 else 0.0
+
+            col_dowel_lines = [
+                (qty, bar, _col_dowel_length(bar), qty * _col_dowel_length(bar) * steel_weight_lookup.get(bar, 0))
+                for qty, bar in col_dowel_groups if qty > 0 and bar
+            ]
+            col_dowel_weight_per_set = sum(line[3] for line in col_dowel_lines)
+            col_dowel_bars_text = " + ".join(f"{q}-{b} x {l:.2f} m" for q, b, l, _ in col_dowel_lines) or "no bars entered"
+
+            if col_dowel_mode == "Exclude":
+                col_dowel_weight = 0.0
+                col_dowel_assumption = "Excluded — no dowels priced"
+            elif col_dowel_use_total_kg:
+                col_dowel_weight = col_dowel_total_kg
+                col_dowel_assumption = f"Total weight entered: {col_dowel_weight:.1f} kg per column"
+            else:
+                col_dowel_weight = col_dowel_weight_per_set * col_dowel_sets
+                col_dowel_len_text = (
+                    f"{col_dowel_length_override:g} m (override)" if col_dowel_length_override > 0
+                    else "auto 2 x 40d + 20 mm"
+                )
+                col_dowel_label = (
+                    "Estimated (match longitudinal bars)" if col_dowel_mode == "Estimate (match longitudinal bars)" else "Detailed"
+                )
+                col_dowel_assumption = (
+                    f"{col_dowel_label}: {col_dowel_bars_text} [{col_dowel_len_text}], "
+                    f"{col_dowel_sets:g} set(s) per column → {col_dowel_weight:.1f} kg per column"
+                )
+
+            if col_dowel_mode == "Estimate (match longitudinal bars)" and col_is_bar_detail and col_dowel_lines:
+                st.caption(f"From longitudinal bars: {col_dowel_bars_text} = {col_dowel_weight_per_set:.1f} kg per set.")
+            if col_dowel_mode != "Exclude" and not col_is_bar_detail:
+                st.caption("Check the Reo Rate given does not already include dowels (double count).")
+            if col_dowel_missing_bar:
+                st.warning(
+                    f"Select a Dowel Bar for {' and '.join(col_dowel_missing_bar)} — a qty without a bar is priced at 0 kg.",
+                    icon=":material/warning:",
+                )
+            if col_dowel_mode != "Exclude" and col_dowel_weight <= 0:
+                if col_dowel_mode == "Estimate (match longitudinal bars)" and col_is_bar_detail:
+                    col_dowel_zero_msg = (
+                        "Dowels are set to Estimate but the longitudinal bars (qty and bar type) are not "
+                        "filled in — dowels are priced at 0 kg."
+                    )
+                else:
+                    col_dowel_zero_msg = (
+                        "Dowels are included but the result is 0 kg — check qty, bar type, sets per "
+                        "column or total weight."
+                    )
+                st.warning(col_dowel_zero_msg, icon=":material/warning:")
 
     # ------------------------------------------------------------------ #
     # CALCULATIONS (bar weights, ties, dowels, reo rate)
@@ -394,26 +502,6 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                 f"worth reviewing before pricing.",
                 icon=":material/warning:",
             )
-
-    # Dowels
-    if col_dowel_mode == "Exclude":
-        col_dowel_qty_used = 0
-    elif col_dowel_mode == "Estimate (1 per longitudinal bar)":
-        # CORREGIDO: antes solo contaba col_long_qty (Grupo 1), ignorando
-        # col_long_qty2 (Grupo 2) — subestimaba dowels en columnas con dos
-        # grupos de barras longitudinales (ej. esquinas + caras).
-        col_dowel_qty_used = col_long_qty + col_long_qty2
-    else:
-        col_dowel_qty_used = col_dowel_qty_manual
-
-    if col_dowel_length_override > 0:
-        col_dowel_length = col_dowel_length_override
-    elif col_dowel_bar:
-        col_dowel_length = (2 * 40 * bar_diameter_lookup.get(col_dowel_bar, 0)) / 1000 + 0.02
-    else:
-        col_dowel_length = 0.0
-
-    col_dowel_weight = col_dowel_qty_used * col_dowel_length * steel_weight_lookup.get(col_dowel_bar, 0)
 
     # ------------------------------------------------------------------ #
     # COSTS & EXTRAS
@@ -561,7 +649,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
         col_reo_summary = f"Bar detail — estimated {col_reo_rate_estimated:.1f} kg/m³"
 
     col_dowels_summary = (
-        f"Included — {col_dowel_weight:.2f} kg ({col_dowel_mode})"
+        f"Included — {col_dowel_weight:.2f} kg per column ({col_dowel_mode})"
         if col_dowel_mode != "Exclude" else "Excluded"
     )
 
@@ -631,7 +719,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                         <li><b>Ligs:</b> {col_lig_weight:.2f} kg</li>
                         <li><b>Reo Rate Estimated:</b> {col_reo_rate_estimated:.1f} kg/m³</li>
                         <li><b>Reo Rate Used for Costing:</b> {col_reo_rate_used:.1f} kg/m³ ({col_steel_mode})</li>
-                        <li><b>Dowels:</b> {col_dowel_weight:.2f} kg ({col_dowel_qty_used} dowels, {col_dowel_mode})</li>
+                        <li><b>Dowels:</b> {col_dowel_weight:.2f} kg — {col_dowel_assumption}</li>
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
@@ -686,10 +774,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
 
             (">>> DOWELS / LIFTING / ACCESSORIES", ""),
             ("Dowel Mode", col_dowel_mode),
-            ("Dowel Bar", col_dowel_bar or "n/a"),
-            ("Dowel Length Used (mm)", round(col_dowel_length * 1000, 1) if col_dowel_length else "n/a"),
-            ("Dowels per Column (used)", col_dowel_qty_used),
-            ("Dowels Total Weight (kg)", round(col_dowel_weight, 2)),
+            ("Dowel Assumption", col_dowel_assumption),
+            ("Dowel Weight per Column (kg, before waste)", round(col_dowel_weight, 2)),
             ("Lifting Points per Column", col_lifting_qty),
             ("Special Accessories per Column", col_accessories_qty),
 
