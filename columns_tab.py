@@ -576,7 +576,6 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             col_waste_items = {
                 "Concrete": col_volume_per_column,
                 "Reinforcing Steel": col_reo_weight_used,
-                "Dowels": col_dowel_weight,
             }
             col_waste_pct = {}
             for label, qty in col_waste_items.items():
@@ -586,7 +585,6 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
                     )
             col_waste_concrete = col_waste_pct.get("Concrete", 0.0)
             col_waste_steel = col_waste_pct.get("Reinforcing Steel", 0.0)
-            col_waste_dowel = col_waste_pct.get("Dowels", 0.0)
 
     # ------------------------------------------------------------------ #
     # COST BUILD-UP (per column)
@@ -596,7 +594,8 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
     col_testing_cost = col_volume_per_column * cost_dict.get("Concrete Testing", 0)
     col_steel_qty = col_reo_weight_used * (1 + col_waste_steel / 100)
     col_steel_cost = col_steel_qty * cost_dict.get("Steel Bars", 0)
-    col_dowel_qty_kg = col_dowel_weight * (1 + col_waste_dowel / 100)
+    # No waste on dowels: they're cut to length for the job.
+    col_dowel_qty_kg = col_dowel_weight
     col_dowel_cost = col_dowel_qty_kg * cost_dict.get("Steel Bars", 0)
     col_lifting_cost = col_lifting_qty * cost_dict.get("Lifting", 0)
     col_accessories_cost = col_accessories_qty * cost_dict.get("Special Accessories", 0)
@@ -657,7 +656,7 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
 
     col_waste_applied = [
         label for label, val in [
-            ("Concrete", col_waste_concrete), ("Reinforcing Steel", col_waste_steel), ("Dowels", col_waste_dowel)
+            ("Concrete", col_waste_concrete), ("Reinforcing Steel", col_waste_steel)
         ] if val and val > 0
     ]
     col_waste_summary = ", ".join(col_waste_applied) if col_waste_applied else "None applied"
@@ -775,14 +774,13 @@ def render_columns_tab(cost_dict, steel_weight_lookup, bar_diameter_lookup,
             (">>> DOWELS / LIFTING / ACCESSORIES", ""),
             ("Dowel Mode", col_dowel_mode),
             ("Dowel Assumption", col_dowel_assumption),
-            ("Dowel Weight per Column (kg, before waste)", round(col_dowel_weight, 2)),
+            ("Dowel Weight per Column (kg, no waste)", round(col_dowel_weight, 2)),
             ("Lifting Points per Column", col_lifting_qty),
             ("Special Accessories per Column", col_accessories_qty),
 
             (">>> WASTE FACTORS APPLIED", ""),
             ("Concrete Waste (%)", col_waste_concrete),
             ("Reinforcing Steel Waste (%)", col_waste_steel),
-            ("Dowels Waste (%)", col_waste_dowel),
 
             (">>> UNIT RATES USED (from Cost Settings)", ""),
             (f"Concrete — {col_concrete_type or 'n/a'} ($/m3)", cost_dict.get(col_concrete_type, 0)),
